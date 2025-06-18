@@ -17,4 +17,3 @@ namespace Repositories.Interfaces
         Task<bool> SaveChangesAsync();
     }
 }
-s
