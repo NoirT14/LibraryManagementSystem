@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using BussinessLayer.Models;
+using APIServer.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LibraryManagement.API.Models;
+namespace APIServer.Data;
 
 public partial class LibraryDatabaseContext : DbContext
 {

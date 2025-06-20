@@ -1,6 +1,6 @@
-﻿using LibraryManagement.API.Models;
+﻿using APIServer.Data;
+using APIServer.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Repositories.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Repositories
+namespace APIServer.Repositories
 {
     public class Repository<T> : IRepository<T> where T : class
     {

@@ -1,6 +1,6 @@
 ﻿using System.Linq.Expressions;
 
-namespace Repositories.Interfaces
+namespace APIServer.Repositories.Interfaces
 {
     public interface IRepository<T> where T : class
     {
@@ -17,4 +17,3 @@ namespace Repositories.Interfaces
         Task<bool> SaveChangesAsync();
     }
 }
-s

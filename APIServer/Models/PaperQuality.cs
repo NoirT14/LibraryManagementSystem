@@ -1,8 +1,7 @@
-﻿using BussinessLayer.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
-namespace BussinessLayer.Models;
+namespace APIServer.Models;
 
 public partial class PaperQuality
 {
