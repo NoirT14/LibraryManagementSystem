@@ -1,4 +1,7 @@
 
+using APIServer.Service.Interfaces;
+using APIServer.Service;
+
 namespace LibraryManagement.API
 {
     public class Program
@@ -13,6 +16,9 @@ namespace LibraryManagement.API
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+
+            builder.Services.AddScoped<ILoanService, LoanService>();
+
 
             var app = builder.Build();
 
