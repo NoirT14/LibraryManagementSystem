@@ -6,5 +6,7 @@ namespace APIServer.Repositories.Interfaces
     {
         Task<List<User>> GetAllWithRolesAsync();
         Task<User?> GetByIdWithRoleAsync(int userId);
+        Task<User?> GetByEmailAsync(string email);
+        Task<User?> GetByUsernameAsync(string username);
     }
 }

@@ -1,7 +1,9 @@
 ﻿using APIServer.Data;
 using APIServer.DTO.Auth;
 using APIServer.Models;
+using APIServer.Repositories.Interfaces;
 using APIServer.Service.Interfaces;
+using Azure.Core;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -16,12 +18,14 @@ namespace APIServer.Service
         private readonly LibraryDatabaseContext _context;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
+        private readonly IUserRepository _userRepository;
 
-        public AuthService (LibraryDatabaseContext context, IConfiguration configuration, IEmailService emailService)
+        public AuthService (LibraryDatabaseContext context, IConfiguration configuration, IEmailService emailService, IUserRepository userRepository)
         {
             _context = context;
             _configuration = configuration;
             _emailService = emailService;
+            _userRepository = userRepository;
         }
 
         public async Task<AuthResult> Authenticate(LoginRequestDTO loginRequest)
@@ -76,6 +80,34 @@ namespace APIServer.Service
                     Expiration = expiration
                 }
             };
+        }
+
+        public async Task<AuthResult> Register(RegisterRequestDTO registerRequest)
+        {
+            if (await _context.Users.AnyAsync(u => u.Username == registerRequest.Username || u.Email == registerRequest.Email))
+            {
+                return new AuthResult { IsSuccess = false, ErrorMessage = "Username or Email already exists." };
+            }
+
+            var passwordHasher = new PasswordHasher<User>();
+
+            var user = new User
+            {
+                Username = registerRequest.Username,
+                FullName = registerRequest.FullName,
+                Email = registerRequest.Email,
+                Phone = registerRequest.Phone,
+                Address = registerRequest.Address,
+                RoleId = 3,
+                CreateDate = DateTime.Now
+            };
+
+            user.PasswordHash = passwordHasher.HashPassword(user, registerRequest.Password);
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return new AuthResult { IsSuccess = true };
         }
 
         public async Task<AuthResult> ResetPassword(ResetPasswordRequestDTO resetRequest)
@@ -184,6 +216,18 @@ namespace APIServer.Service
             await _emailService.SendMailAsync(user.Email, subject, body);
 
             return true;
+        }
+
+        public async Task<bool> IsEmailTaken(string email)
+        {
+            var user = await _userRepository.GetByEmailAsync(email);
+            return user != null;
+        }
+
+        public async Task<bool> IsUsernameTaken(string username)
+        {
+            var user = await _userRepository.GetByUsernameAsync(username);
+            return user != null;
         }
     }
 }

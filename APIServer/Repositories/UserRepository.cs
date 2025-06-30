@@ -20,5 +20,15 @@ namespace APIServer.Repositories
             return await _dbSet.Include(u => u.Role)
                                .FirstOrDefaultAsync(u => u.UserId == id);
         }
+        public async Task<User?> GetByEmailAsync(string email)
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+        }
+        public async Task<User?> GetByUsernameAsync(string username)
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Username.ToLower() == username.ToLower());
+        }
     }
 }
