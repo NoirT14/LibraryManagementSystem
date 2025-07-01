@@ -5,6 +5,7 @@ using APIServer.Repositories.Interfaces;
 using APIServer.Service;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
@@ -20,7 +21,11 @@ namespace LibraryManagement.API
             var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddOData(opt =>
+                {
+                    opt.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100);
+                });
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -68,6 +73,7 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IBookService, BookService>();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
