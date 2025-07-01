@@ -77,7 +77,8 @@ namespace APIServer.Service
                 Data = new LoginResponseDTO
                 {
                     Token = tokenString,
-                    Expiration = expiration
+                    Expiration = expiration,
+                    Role = user.RoleId
                 }
             };
         }

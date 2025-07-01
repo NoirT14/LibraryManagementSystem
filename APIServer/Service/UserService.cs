@@ -129,7 +129,7 @@ namespace APIServer.Service
 
         public async Task UpdateUserByAdminAsync(AdminUpdateUserRequestDTO updateUserByAdminRequest)
         {
-            var user = await _userRepository.GetByIdAsync(updateUserByAdminRequest.UsertId)
+            var user = await _userRepository.GetByIdAsync(updateUserByAdminRequest.UserId)
             ?? throw new KeyNotFoundException("User not found");
 
             user.FullName = updateUserByAdminRequest.FullName;
