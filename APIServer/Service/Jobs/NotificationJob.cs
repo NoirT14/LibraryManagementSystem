@@ -26,6 +26,7 @@ namespace APIServer.Service.Jobs
                     await loanService.UpdateOverdueLoansAndFinesAsync();
                     await loanService.SendDueDateRemindersAsync();
                     await loanService.SendFineNotificationsAsync();
+                    
                     await ReservationService.CheckAvailableReservationsAsync();
                     await ReservationService.ExpireOldReservationsAsync();
                 }
@@ -36,7 +37,7 @@ namespace APIServer.Service.Jobs
                 }
 
                 // Đợi 24h rồi chạy lại (hoặc đổi thành TimeSpan ngắn hơn nếu test)
-                await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
     }

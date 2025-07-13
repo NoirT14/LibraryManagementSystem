@@ -21,12 +21,19 @@ namespace APIServer.Service
         public async Task SendDueDateRemindersAsync()
         {
             var today = DateTime.Now.Date;
+            var startOfDay = today;
+            var endOfDay = today.AddDays(1);
+
+            Console.WriteLine("📌 [Reminder] Bắt đầu gửi DueDateReminder...");
+
             var dueSoonLoans = await _context.Loans
                 .Include(l => l.User)
                 .Where(l => l.LoanStatus == "Borrowed"
                     && l.DueDate.Date >= today
                     && l.DueDate.Date <= today.AddDays(2))
                 .ToListAsync();
+
+            Console.WriteLine($"📊 [Reminder] Có {dueSoonLoans.Count} khoản mượn sắp đến hạn.");
 
             var userDueLoans = dueSoonLoans
                 .GroupBy(l => l.UserId)
@@ -37,19 +44,21 @@ namespace APIServer.Service
                 var user = group.First().User;
                 if (user == null || string.IsNullOrEmpty(user.Email))
                 {
-                    Console.WriteLine($"User {group.Key}: missing user or email.");
+                    Console.WriteLine($"⚠️ [Reminder] User {group.Key} thiếu thông tin hoặc email.");
                     continue;
                 }
+
+                Console.WriteLine($"🔔 [Reminder] Đang xử lý User {user.UserId} ({user.Email})...");
 
                 var alreadySent = await _context.Notifications.AnyAsync(n =>
                     n.ReceiverId == user.UserId &&
                     n.NotificationType == "DueDateReminder" &&
-                    n.NotificationDate.Date == today
+                    n.NotificationDate >= startOfDay && n.NotificationDate < endOfDay
                 );
 
                 if (alreadySent)
                 {
-                    Console.WriteLine($"User {user.UserId}: Reminder already sent today.");
+                    Console.WriteLine($"✅ [Reminder] User {user.UserId}: Đã gửi hôm nay, bỏ qua.");
                     continue;
                 }
 
@@ -57,28 +66,28 @@ namespace APIServer.Service
 
                 var plainBody = $@"Dear {user.FullName ?? "User"},
 
-                The following loans are due soon:
-                {loanList}
-                Please return the books on time to avoid fines.
+The following loans are due soon:
+{loanList}
+Please return the books on time to avoid fines.
 
-                Thank you.";
+Thank you.";
 
                 var htmlLoanList = string.Join("", group.Select(l => $"<li>Loan ID: {l.LoanId}, Due on: {l.DueDate:yyyy-MM-dd}</li>"));
 
                 var trackingUrl = "http://localhost:5027/api/notifications/track?notificationId=0";
 
                 var htmlBodyTemplate = $@"<p>Dear {user.FullName ?? "User"},</p>
-                <p>The following loans are due soon:</p>
-                <ul>
-                {htmlLoanList}
-                </ul>
-                <p>Please return the books on time to avoid fines.</p>
-                <p>Please <a href='{trackingUrl}'>click here</a> to confirm reading this email.</p>
-                <p>Thank you.</p>";
+<p>The following loans are due soon:</p>
+<ul>{htmlLoanList}</ul>
+<p>Please return the books on time to avoid fines.</p>
+<p>Please <a href='{trackingUrl}'>click here</a> to confirm reading this email.</p>
+<p>Thank you.</p>";
 
                 try
                 {
+                    Console.WriteLine($"📤 [Reminder] Gửi email đến {user.Email}...");
                     await _emailService.SendEmailAsync(user.Email, "Library Due Date Reminder", htmlBodyTemplate, isHtml: true);
+                    Console.WriteLine("✅ [Reminder] Email đã gửi thành công.");
 
                     var notification = new Notification
                     {
@@ -92,14 +101,14 @@ namespace APIServer.Service
                         ReadStatus = false
                     };
 
+                    Console.WriteLine("💾 [Reminder] Đang lưu notification vào database...");
                     _context.Notifications.Add(notification);
                     await _context.SaveChangesAsync();
-
-                    Console.WriteLine($"Reminder sent and notification saved for User {user.UserId}.");
+                    Console.WriteLine($"✅ [Reminder] Đã lưu notification cho User {user.UserId}.");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error sending email to {user.Email}: {ex.Message}");
+                    Console.WriteLine($"❌ [Reminder] Lỗi khi gửi mail tới {user.Email}: {ex.Message}");
                 }
             }
         }
@@ -107,6 +116,9 @@ namespace APIServer.Service
         public async Task SendFineNotificationsAsync()
         {
             var today = DateTime.Now.Date;
+            var startOfDay = today;
+            var endOfDay = today.AddDays(1);
+
             var overdueLoansWithFines = await _context.Loans
                 .Include(l => l.User)
                 .Where(l => l.LoanStatus == "Overdue" && l.FineAmount > 0)
@@ -125,7 +137,7 @@ namespace APIServer.Service
                     n.ReceiverId == user.UserId &&
                     n.NotificationType == "FineNotice" &&
                     n.RelatedId == loan.LoanId &&
-                    n.NotificationDate.Date == today
+                    n.NotificationDate >= startOfDay && n.NotificationDate < endOfDay
                 );
 
                 if (alreadySent)
@@ -136,11 +148,11 @@ namespace APIServer.Service
 
                 var body = $@"Dear {user.FullName ?? "User"},
 
-                You have an outstanding fine of {loan.FineAmount:C} for an overdue loan (Loan ID: {loan.LoanId}).
+You have an outstanding fine of {loan.FineAmount:C} for an overdue loan (Loan ID: {loan.LoanId}).
 
-                Please pay the fine at your earliest convenience to avoid further action.
+Please pay the fine at your earliest convenience to avoid further action.
 
-                Thank you.";
+Thank you.";
 
                 try
                 {

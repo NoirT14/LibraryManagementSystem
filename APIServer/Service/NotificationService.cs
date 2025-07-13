@@ -64,7 +64,7 @@ namespace APIServer.Service
                 return false;
 
             if (notification.ReadStatus == true)
-                return true; // Đã đọc rồi, không cần làm gì
+                return true; 
 
             notification.ReadStatus = true;
             await _context.SaveChangesAsync();

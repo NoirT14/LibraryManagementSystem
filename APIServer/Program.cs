@@ -70,7 +70,6 @@ namespace LibraryManagement.API
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
 
             // Thêm middleware CORS ngay trước UseAuthorization
             app.UseCors("AllowLocalhost3000");

@@ -16,26 +16,28 @@ namespace APIServer.Controllers
             _notificationService = notificationService;
         }
 
+        // GET: api/notifications
         [EnableQuery]
         [HttpGet]
         public IActionResult GetAll()
         {
             var query = _notificationService.GetAllNotificationsQuery();
-            return Ok(query); // Không await, không ToListAsync
+            return Ok(query); // Trả về IQueryable hỗ trợ OData
         }
 
+        // GET: api/notifications/receiver/{receiverId}?$filter=...&$orderby=...
+        [EnableQuery]
         [HttpGet("receiver/{receiverId}")]
-        public async Task<IActionResult> GetByReceiverId(int receiverId)
+        public IActionResult GetByReceiverId(int receiverId)
         {
-            var result = await _notificationService.GetNotificationsByReceiverIdAsync(receiverId);
+            var query = _notificationService
+                .GetAllNotificationsQuery()
+                .Where(n => n.ReceiverId == receiverId);
 
-            if (result == null || !result.Any())
-                return NotFound("Không tìm thấy thông báo nào cho người dùng này.");
-
-            return Ok(result);
+            return Ok(query); // Trả về IQueryable để OData hoạt động
         }
 
-
+        // GET: api/notifications/track?notificationId=1
         [HttpGet("track")]
         public async Task<IActionResult> Track(int notificationId)
         {
@@ -44,13 +46,14 @@ namespace APIServer.Controllers
             if (!result)
                 return NotFound("Notification not found.");
 
-            // Trả pixel 1x1 transparent png
+            // Trả về ảnh pixel 1x1
             var pixel = Convert.FromBase64String(
                 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAoMBgF9+FiQAAAAASUVORK5CYII=");
 
             return File(pixel, "image/png");
         }
 
+        // PATCH: api/notifications/{id}/mark-read
         [HttpPatch("{id}/mark-read")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
@@ -59,9 +62,7 @@ namespace APIServer.Controllers
             if (!result)
                 return NotFound("Notification not found");
 
-            return NoContent(); // hoặc Ok() nếu bạn muốn
+            return NoContent();
         }
-
-
     }
 }
