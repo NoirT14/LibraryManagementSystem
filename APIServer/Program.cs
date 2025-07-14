@@ -78,8 +78,6 @@ namespace LibraryManagement.API
 
             app.MapControllers();
 
-            Console.WriteLine("ConnectionString in use: " + builder.Configuration.GetConnectionString("DefaultConnection"));
-
             app.Run();
 
         }
