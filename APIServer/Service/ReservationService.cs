@@ -110,11 +110,10 @@ namespace APIServer.Service
                     <p>Vui lòng đến thư viện nhận trong vòng <strong>2 ngày</strong>.</p>
                     <p>Xin cảm ơn.</p>";
 
-                        await _emailService.SendEmailAsync(
+                        await _emailService.SendMailAsync(
                             reservation.User.Email,
                             "Thông báo đặt sách đã sẵn sàng",
-                            emailBody,
-                            isHtml: true
+                            emailBody
                         );
 
                         Console.WriteLine($"Email sent to {reservation.User.Email}");
@@ -169,11 +168,10 @@ namespace APIServer.Service
                             <p>Nếu bạn vẫn muốn mượn sách, vui lòng đặt lại.</p>
                             <p>Xin cảm ơn.</p>";
 
-                        await _emailService.SendEmailAsync(
+                        await _emailService.SendMailAsync(
                             reservation.User.Email,
                             "Thông báo đặt sách hết hạn",
-                            emailBody,
-                            isHtml: true
+                            emailBody
                         );
 
                         Console.WriteLine($"Email sent to {reservation.User.Email}");

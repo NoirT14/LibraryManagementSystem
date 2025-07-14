@@ -86,7 +86,7 @@ Thank you.";
                 try
                 {
                     Console.WriteLine($"📤 [Reminder] Gửi email đến {user.Email}...");
-                    await _emailService.SendEmailAsync(user.Email, "Library Due Date Reminder", htmlBodyTemplate, isHtml: true);
+                    await _emailService.SendMailAsync(user.Email, "Library Due Date Reminder", htmlBodyTemplate);
                     Console.WriteLine("✅ [Reminder] Email đã gửi thành công.");
 
                     var notification = new Notification
@@ -156,7 +156,7 @@ Thank you.";
 
                 try
                 {
-                    await _emailService.SendEmailAsync(user.Email, "Library Fine Notice", body);
+                    await _emailService.SendMailAsync(user.Email, "Library Fine Notice", body);
 
                     _context.Notifications.Add(new Notification
                     {
