@@ -8,5 +8,6 @@ namespace APIServer.Repositories.Interfaces
         Task<User?> GetByIdWithRoleAsync(int userId);
         Task<User?> GetByEmailAsync(string email);
         Task<User?> GetByUsernameAsync(string username);
+        Task<(List<User> Items, int TotalCount)> GetUsersWithRolesPagedAsync(int page, int pageSize);
     }
 }

@@ -1,4 +1,5 @@
 ﻿
+using APIServer.Configs;
 using APIServer.Data;
 using APIServer.Repositories;
 using APIServer.Repositories.Interfaces;
@@ -24,7 +25,8 @@ namespace LibraryManagement.API
             builder.Services.AddControllers()
                 .AddOData(opt =>
                 {
-                    opt.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100);
+                    opt.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100)
+                        .AddRouteComponents("odata", ODataConfig.GetEdmModel());
                 });
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -74,40 +76,10 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IBookService, BookService>();
+            builder.Services.AddHostedService<SessionCleanupService>();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-            //builder.Services.AddSwaggerGen(c =>
-            //{
-            //    c.SwaggerDoc("v1", new() { Title = "APIServer", Version = "v1" });
-
-            //    // Thêm security definition cho JWT Bearer
-            //    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            //    {
-            //        Description = "Nhập vào định dạng: Bearer {token}",
-            //        Name = "Authorization",
-            //        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-            //        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-            //        Scheme = "bearer",
-            //        BearerFormat = "JWT"
-            //    });
-
-            //    // Bắt Swagger UI luôn gửi kèm token
-            //    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-            //    {
-            //        {
-            //            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            //            {
-            //                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-            //                {
-            //                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-            //                    Id = "Bearer"
-            //                }
-            //            },
-            //            Array.Empty<string>()
-            //        }
-            //    });
-            //            });
 
             var app = builder.Build();
 

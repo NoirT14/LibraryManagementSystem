@@ -3,32 +3,50 @@ using APIServer.DTO.Auth;
 using APIServer.Models;
 using APIServer.Repositories.Interfaces;
 using APIServer.Service.Interfaces;
-using Azure.Core;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 
 namespace APIServer.Service
 {
+    public class SessionData
+    {
+        public string SessionId { get; set; } = string.Empty;
+        public int UserId { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public DateTime LoginTime { get; set; }
+        public DateTime LastActivity { get; set; }
+        public string IpAddress { get; set; } = string.Empty;
+        public BrowserInfoDTO? BrowserInfo { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+
     public class AuthService : IAuthService
     {
         private readonly LibraryDatabaseContext _context;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
         private readonly IUserRepository _userRepository;
+        private readonly ILogger<AuthService> _logger;
 
-        public AuthService (LibraryDatabaseContext context, IConfiguration configuration, IEmailService emailService, IUserRepository userRepository)
+        // ✅ UPDATED: Replace old session tracking with new SessionData
+        private static readonly Dictionary<string, SessionData> _activeSessions = new();
+        private static readonly object _lock = new();
+
+        public AuthService(LibraryDatabaseContext context, IConfiguration configuration, IEmailService emailService, IUserRepository userRepository, ILogger<AuthService> logger)
         {
             _context = context;
             _configuration = configuration;
             _emailService = emailService;
             _userRepository = userRepository;
+            _logger = logger;
         }
 
-        public async Task<AuthResult> Authenticate(LoginRequestDTO loginRequest)
+        public async Task<AuthResult> Authenticate(LoginRequestDTO loginRequest, string ipAddress, string userAgent)
         {
             var user = await _context.Users.Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Username == loginRequest.UsernameorEmail || u.Email == loginRequest.UsernameorEmail);
@@ -40,12 +58,31 @@ namespace APIServer.Service
             var passwordHasher = new PasswordHasher<User>();
             var result = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, loginRequest.Password);
 
-            if(result == PasswordVerificationResult.Failed)
+            if (result == PasswordVerificationResult.Failed)
             {
                 return new AuthResult { IsSuccess = false, ErrorMessage = "Invalid username or email or password." };
             }
 
-            var claims = new[]
+            var sessionId = Guid.NewGuid().ToString();
+            var loginTime = DateTime.UtcNow;
+
+            // ✅ UPDATED: Store session data for logout functionality
+            lock (_lock)
+            {
+                _activeSessions[sessionId] = new SessionData
+                {
+                    SessionId = sessionId,
+                    UserId = user.UserId,
+                    Username = user.Username,
+                    LoginTime = loginTime,
+                    LastActivity = loginTime,
+                    IpAddress = ipAddress,
+                    BrowserInfo = loginRequest.BrowserInfo,
+                    IsActive = true
+                };
+            }
+
+            var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
@@ -53,8 +90,34 @@ namespace APIServer.Service
                 new Claim("email", user.Email),
                 new Claim("role", user.Role.RoleName),
                 new Claim("phone", user.Phone ?? ""),
-                new Claim("address", user.Address ?? "")
+                new Claim("address", user.Address ?? ""),
+
+                new Claim("sessionId", sessionId),
+                new Claim("loginTime", loginTime.ToString("O")),
+                new Claim("ipAddress", ipAddress),
+                new Claim("userAgent", userAgent)
             };
+
+            // ✅ Add browser info claims if available
+            if (loginRequest.BrowserInfo != null)
+            {
+                if (!string.IsNullOrEmpty(loginRequest.BrowserInfo.BrowserName))
+                    claims.Add(new Claim("browserName", loginRequest.BrowserInfo.BrowserName));
+                if (!string.IsNullOrEmpty(loginRequest.BrowserInfo.BrowserVersion))
+                    claims.Add(new Claim("browserVersion", loginRequest.BrowserInfo.BrowserVersion));
+                if (!string.IsNullOrEmpty(loginRequest.BrowserInfo.OperatingSystem))
+                    claims.Add(new Claim("os", loginRequest.BrowserInfo.OperatingSystem));
+                if (!string.IsNullOrEmpty(loginRequest.BrowserInfo.Language))
+                    claims.Add(new Claim("language", loginRequest.BrowserInfo.Language));
+                if (!string.IsNullOrEmpty(loginRequest.BrowserInfo.Timezone))
+                    claims.Add(new Claim("timezone", loginRequest.BrowserInfo.Timezone));
+                if (!string.IsNullOrEmpty(loginRequest.BrowserInfo.ScreenResolution))
+                    claims.Add(new Claim("screenResolution", loginRequest.BrowserInfo.ScreenResolution));
+
+                // ✅ Full browser info as JSON
+                var browserInfoJson = JsonSerializer.Serialize(loginRequest.BrowserInfo);
+                claims.Add(new Claim("browserInfo", browserInfoJson));
+            }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured")));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -68,8 +131,22 @@ namespace APIServer.Service
                 expires: expiration,
                 signingCredentials: creds
             );
-            
+
             var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+            _logger.LogInformation("User {UserId} ({Username}) logged in from {IpAddress} using {Browser} on {OS}",
+                user.UserId, user.Username, ipAddress,
+                loginRequest.BrowserInfo?.BrowserName ?? "Unknown",
+                loginRequest.BrowserInfo?.OperatingSystem ?? "Unknown");
+
+            // ✅ Prepare session info for response
+            var sessionInfo = new SessionInfoDTO
+            {
+                SessionId = sessionId,
+                LoginTime = loginTime,
+                IpAddress = ipAddress,
+                BrowserInfo = loginRequest.BrowserInfo
+            };
 
             return new AuthResult
             {
@@ -77,13 +154,13 @@ namespace APIServer.Service
                 Data = new LoginResponseDTO
                 {
                     Token = tokenString,
-                    Expiration = expiration,
-                    Role = user.RoleId
+                    Role = user.RoleId,
+                    SessionInfo = sessionInfo,
                 }
             };
         }
 
-        public async Task<AuthResult> Register(RegisterRequestDTO registerRequest)
+        public async Task<AuthResult> Register(RegisterRequestDTO registerRequest, string ipAddress, string userAgent)
         {
             if (await _context.Users.AnyAsync(u => u.Username == registerRequest.Username || u.Email == registerRequest.Email))
             {
@@ -108,7 +185,90 @@ namespace APIServer.Service
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            _logger.LogInformation("User {Username} ({Email}) registered from {IpAddress} using {Browser} on {OS}",
+                registerRequest.Username, registerRequest.Email, ipAddress,
+                registerRequest.BrowserInfo?.BrowserName ?? "Unknown",
+                registerRequest.BrowserInfo?.OperatingSystem ?? "Unknown");
+
             return new AuthResult { IsSuccess = true };
+        }
+
+        // ✅ NEW: Invalidate session for logout
+        public async Task<bool> InvalidateSessionAsync(string sessionId)
+        {
+            await Task.CompletedTask;
+
+            lock (_lock)
+            {
+                if (_activeSessions.ContainsKey(sessionId))
+                {
+                    _activeSessions.Remove(sessionId);
+                    _logger.LogInformation("Session {SessionId} invalidated successfully", sessionId);
+                    return true;
+                }
+
+                _logger.LogWarning("Session {SessionId} not found for invalidation", sessionId);
+                return false;
+            }
+        }
+
+        // ✅ NEW: Cleanup expired sessions
+        public async Task CleanupExpiredSessionsAsync()
+        {
+            await Task.CompletedTask;
+
+            lock (_lock)
+            {
+                var cutoffTime = DateTime.UtcNow.AddHours(-24); // Remove sessions older than 24 hours
+                var expiredSessions = _activeSessions
+                    .Where(s => s.Value.LastActivity < cutoffTime)
+                    .Select(s => s.Key)
+                    .ToList();
+
+                foreach (var sessionId in expiredSessions)
+                {
+                    _activeSessions.Remove(sessionId);
+                }
+
+                if (expiredSessions.Count > 0)
+                {
+                    _logger.LogInformation("Cleaned up {Count} expired sessions", expiredSessions.Count);
+                }
+            }
+        }
+
+        // ✅ UPDATED: Get analytics with accurate session data
+        public async Task<Dictionary<string, object>> GetAnalyticsAsync()
+        {
+            await Task.CompletedTask;
+
+            lock (_lock)
+            {
+                var now = DateTime.UtcNow;
+                var activeSessions = _activeSessions.Values
+                    .Where(s => s.LastActivity > now.AddMinutes(-30))
+                    .ToList();
+
+                var browserStats = activeSessions
+                    .Where(s => s.BrowserInfo?.BrowserName != null)
+                    .GroupBy(s => s.BrowserInfo!.BrowserName)
+                    .ToDictionary(g => g.Key, g => g.Count());
+
+                var osStats = activeSessions
+                    .Where(s => s.BrowserInfo?.OperatingSystem != null)
+                    .GroupBy(s => s.BrowserInfo!.OperatingSystem)
+                    .ToDictionary(g => g.Key, g => g.Count());
+
+                return new Dictionary<string, object>
+                {
+                    ["BrowserDistribution"] = browserStats,
+                    ["OperatingSystemDistribution"] = osStats,
+                    ["ActiveSessionsLast30Minutes"] = activeSessions.Count,
+                    ["TotalActiveSessions"] = _activeSessions.Count,
+                    ["TotalSessions"] = _activeSessions.Count,
+                    ["GeneratedAt"] = DateTime.UtcNow
+                };
+            }
         }
 
         public async Task<AuthResult> ResetPassword(ResetPasswordRequestDTO resetRequest)

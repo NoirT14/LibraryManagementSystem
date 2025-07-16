@@ -1,4 +1,5 @@
-﻿using APIServer.DTO.User;
+﻿using APIServer.DTO.Common;
+using APIServer.DTO.User;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -95,6 +96,16 @@ namespace APIServer.Controllers
         {
             await _userService.DeleteUserAsync(userId);
             return NoContent();
+        }
+
+        [Authorize(Policy = "AdminOnly")]
+        [HttpGet("admin/paged")]
+        public async Task<IActionResult> GetUsersPaged([FromQuery] PaginationRequestDTO request)
+        {
+            if (request.Page < 1 || request.PageSize < 1) return BadRequest("Page and PageSize must be >= 1");
+
+            var result = await _userService.GetUsersPagedAsync(request.Page, request.PageSize);
+            return Ok(result);
         }
     }
 }

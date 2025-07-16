@@ -4,11 +4,14 @@ namespace APIServer.Service.Interfaces
 {
     public interface IAuthService
     {
-        Task<AuthResult> Authenticate(LoginRequestDTO loginRequest);
-        Task<AuthResult> Register(RegisterRequestDTO registerRequest);
+        Task<AuthResult> Authenticate(LoginRequestDTO loginRequest, string ipAddress, string userAgent);
+        Task<AuthResult> Register(RegisterRequestDTO registerRequest, string ipAddress, string userAgent);
         Task<bool> SendResetPasswordTokenAsync(ForgotPasswordRequestDTO request);
         Task<AuthResult> ResetPassword(ResetPasswordRequestDTO resetRequest);
         Task<bool> IsEmailTaken(string email);
         Task<bool> IsUsernameTaken(string username);
+        Task<Dictionary<string, object>> GetAnalyticsAsync();
+        Task<bool> InvalidateSessionAsync(string sessionId);
+        Task CleanupExpiredSessionsAsync();
     }
 }
