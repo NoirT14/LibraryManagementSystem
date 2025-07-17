@@ -54,8 +54,27 @@ namespace APIServer.Controllers
                 return BadRequest("Không thể xác định thông tin user hiện tại");
             }
 
-            await _userService.ChangePasswordAsync(currentUserId, changePasswordRequest);
-            return NoContent();
+            try
+            {
+                await _userService.ChangePasswordAsync(currentUserId, changePasswordRequest);
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message); // 401
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message); // 400  
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message); // 404
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [Authorize(Policy = "AdminOnly")]
