@@ -87,6 +87,8 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IBookService, BookService>();
+            builder.Services.AddScoped<IReservationService, ReservationService>();
+            builder.Services.AddScoped<ILoanService, LoanService>();
             builder.Services.AddHostedService<SessionCleanupService>();
 
             builder.Services.AddEndpointsApiExplorer();
