@@ -25,6 +25,16 @@ namespace APIServer.Service
         public bool IsActive { get; set; } = true;
     }
 
+    // ✅ NEW: OTP Data structure
+    public class OtpData
+    {
+        public string Email { get; set; } = string.Empty;
+        public string OtpCode { get; set; } = string.Empty;
+        public DateTime ExpiryTime { get; set; }
+        public int UserId { get; set; }
+        public int AttemptCount { get; set; } = 0;
+    }
+
     public class AuthService : IAuthService
     {
         private readonly LibraryDatabaseContext _context;
@@ -35,6 +45,9 @@ namespace APIServer.Service
 
         // ✅ UPDATED: Replace old session tracking with new SessionData
         private static readonly Dictionary<string, SessionData> _activeSessions = new();
+
+        // ✅ NEW: OTP storage (In production, consider using Redis or database)
+        private static readonly Dictionary<string, OtpData> _otpStorage = new();
         private static readonly object _lock = new();
 
         public AuthService(LibraryDatabaseContext context, IConfiguration configuration, IEmailService emailService, IUserRepository userRepository, ILogger<AuthService> logger)
@@ -271,112 +284,206 @@ namespace APIServer.Service
             }
         }
 
-        public async Task<AuthResult> ResetPassword(ResetPasswordRequestDTO resetRequest)
-        {
-            if (string.IsNullOrEmpty(resetRequest.Token))
-            {
-                return new AuthResult { IsSuccess = false, ErrorMessage = "Token is required." };
-            }
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            SecurityToken validatedToken;
-
-            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured"));
-
-            try
-            {
-                var princical = tokenHandler.ValidateToken(resetRequest.Token, new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = _configuration["Jwt:Issuer"],
-                    ValidAudience = _configuration["Jwt:Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
-                    ClockSkew = TimeSpan.Zero
-                }, out validatedToken);
-
-                var purposeClaim = princical.FindFirst("purpose")?.Value;
-                if (purposeClaim != "reset-password")
-                {
-                    return new AuthResult { IsSuccess = false, ErrorMessage = "Invalid token purpose." };
-                }
-
-                var userIdClaim = princical.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var emailClaim = princical.FindFirst(ClaimTypes.Email)?.Value;
-
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                {
-                    return new AuthResult { IsSuccess = false, ErrorMessage = "Invalid token user." };
-                }
-                if (string.IsNullOrEmpty(emailClaim))
-                {
-                    return new AuthResult { IsSuccess = false, ErrorMessage = "Invalid token email." };
-                }
-
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId && u.Email == emailClaim);
-                if (user == null)
-                {
-                    return new AuthResult { IsSuccess = false, ErrorMessage = "User not found." };
-                }
-
-                var passwordHasher = new PasswordHasher<User>();
-                user.PasswordHash = passwordHasher.HashPassword(user, resetRequest.NewPassword);
-
-                await _context.SaveChangesAsync();
-
-                return new AuthResult { IsSuccess = true };
-            }
-            catch (SecurityTokenExpiredException)
-            {
-                return new AuthResult { IsSuccess = false, ErrorMessage = "Token has expired." };
-            }
-            catch (Exception)
-            {
-                return new AuthResult { IsSuccess = false, ErrorMessage = "Invalid token." };
-            }
-        }
-
-        public async Task<bool> SendResetPasswordTokenAsync(ForgotPasswordRequestDTO request)
+        // ✅ UPDATED: Send OTP instead of reset link
+        public async Task<bool> SendResetPasswordOtpAsync(ForgotPasswordRequestDTO request)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.UsernameorEmail || u.Email == request.UsernameorEmail);
             if (user == null)
             {
-                return false;
+                // Return true to prevent email enumeration attacks
+                return true;
             }
 
-            var claims = new[]
+            // Generate 6-digit OTP
+            var random = new Random();
+            var otpCode = random.Next(100000, 999999).ToString();
+            var expiryTime = DateTime.UtcNow.AddMinutes(10); // OTP valid for 10 minutes
+
+            // Store OTP
+            lock (_lock)
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim("purpose", "reset-password")
+                _otpStorage[user.Email] = new OtpData
+                {
+                    Email = user.Email,
+                    OtpCode = otpCode,
+                    ExpiryTime = expiryTime,
+                    UserId = user.UserId,
+                    AttemptCount = 0
+                };
+            }
+
+            string subject = "Password Reset OTP";
+            string body = $"<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>" +
+                          $"<h2 style='color: #333;'>Password Reset Request</h2>" +
+                          $"<p>Hi {user.FullName},</p>" +
+                          $"<p>You requested to reset your password. Use the OTP code below to proceed:</p>" +
+                          $"<div style='background-color: #f8f9fa; border: 2px solid #007bff; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;'>" +
+                          $"<h1 style='color: #007bff; font-size: 32px; margin: 0; letter-spacing: 5px;'>{otpCode}</h1>" +
+                          $"</div>" +
+                          $"<p><strong>Important:</strong></p>" +
+                          $"<ul>" +
+                          $"<li>This OTP is valid for <strong>10 minutes</strong> only</li>" +
+                          $"<li>Do not share this code with anyone</li>" +
+                          $"<li>If you didn't request this, please ignore this email</li>" +
+                          $"</ul>" +
+                          $"<p>Best regards,<br>DevTeam</p>" +
+                          $"</div>";
+
+            try
+            {
+                await _emailService.SendMailAsync(user.Email, subject, body);
+                _logger.LogInformation("OTP sent to user {UserId} ({Email})", user.UserId, user.Email);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send OTP to {Email}", user.Email);
+                return false;
+            }
+        }
+
+        // ✅ FIXED: Return proper AuthResult with object instead of specific type
+        public async Task<AuthResult> VerifyOtpAsync(VerifyOtpRequestDTO request)
+        {
+            await Task.CompletedTask;
+
+            lock (_lock)
+            {
+                if (!_otpStorage.TryGetValue(request.Email, out var otpData))
+                {
+                    return new AuthResult { IsSuccess = false, ErrorMessage = "Invalid or expired OTP." };
+                }
+
+                // Check if OTP is expired
+                if (DateTime.UtcNow > otpData.ExpiryTime)
+                {
+                    _otpStorage.Remove(request.Email);
+                    return new AuthResult { IsSuccess = false, ErrorMessage = "OTP has expired. Please request a new one." };
+                }
+
+                // Check attempt limit (max 5 attempts)
+                if (otpData.AttemptCount >= 5)
+                {
+                    _otpStorage.Remove(request.Email);
+                    return new AuthResult { IsSuccess = false, ErrorMessage = "Too many failed attempts. Please request a new OTP." };
+                }
+
+                // Verify OTP
+                if (otpData.OtpCode != request.OtpCode)
+                {
+                    otpData.AttemptCount++;
+                    return new AuthResult { IsSuccess = false, ErrorMessage = $"Invalid OTP. {5 - otpData.AttemptCount} attempts remaining." };
+                }
+
+                // ✅ FIXED: Return object instead of specific DTO type
+                return new AuthResult
+                {
+                    IsSuccess = true,
+                    Data = new VerifyOtpResponseDTO
+                    {
+                        Email = request.Email,
+                        UserId = otpData.UserId,
+                        Message = "OTP verified successfully. You can now reset your password."
+                    }
+                };
+            }
+        }
+
+        // ✅ FIXED: Return proper AuthResult with string message
+        public async Task<AuthResult> ResetPasswordWithOtpAsync(ResetPasswordWithOtpRequestDTO request)
+        {
+            lock (_lock)
+            {
+                if (!_otpStorage.TryGetValue(request.Email, out var otpData))
+                {
+                    return new AuthResult { IsSuccess = false, ErrorMessage = "Invalid or expired session. Please start over." };
+                }
+
+                // Verify OTP again for security
+                if (otpData.OtpCode != request.OtpCode || DateTime.UtcNow > otpData.ExpiryTime)
+                {
+                    _otpStorage.Remove(request.Email);
+                    return new AuthResult { IsSuccess = false, ErrorMessage = "Invalid or expired OTP." };
+                }
+            }
+
+            // Get user from database
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null)
+            {
+                return new AuthResult { IsSuccess = false, ErrorMessage = "User not found." };
+            }
+
+            // Update password
+            var passwordHasher = new PasswordHasher<User>();
+            user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                // Remove OTP from storage after successful password reset
+                lock (_lock)
+                {
+                    _otpStorage.Remove(request.Email);
+                }
+
+                _logger.LogInformation("Password reset successfully for user {UserId} ({Email})", user.UserId, user.Email);
+
+                // ✅ FIXED: Return string message as object, not direct string
+                return new AuthResult
+                {
+                    IsSuccess = true,
+                    Data = new { Message = "Password has been reset successfully." }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to reset password for user {UserId}", user.UserId);
+                return new AuthResult { IsSuccess = false, ErrorMessage = "Failed to reset password. Please try again." };
+            }
+        }
+
+        // ✅ NEW: Cleanup expired OTPs
+        public async Task CleanupExpiredOtpsAsync()
+        {
+            await Task.CompletedTask;
+
+            lock (_lock)
+            {
+                var now = DateTime.UtcNow;
+                var expiredOtps = _otpStorage
+                    .Where(o => o.Value.ExpiryTime < now)
+                    .Select(o => o.Key)
+                    .ToList();
+
+                foreach (var email in expiredOtps)
+                {
+                    _otpStorage.Remove(email);
+                }
+
+                if (expiredOtps.Count > 0)
+                {
+                    _logger.LogInformation("Cleaned up {Count} expired OTPs", expiredOtps.Count);
+                }
+            }
+        }
+
+        // ✅ LEGACY: Keep old method for backward compatibility (now calls OTP method)
+        public async Task<bool> SendResetPasswordTokenAsync(ForgotPasswordRequestDTO request)
+        {
+            return await SendResetPasswordOtpAsync(request);
+        }
+
+        // ✅ LEGACY: Keep old method for backward compatibility
+        public async Task<AuthResult> ResetPassword(ResetPasswordRequestDTO resetRequest)
+        {
+            // This method is deprecated, redirect users to use OTP method
+            return new AuthResult
+            {
+                IsSuccess = false,
+                ErrorMessage = "This method is no longer supported. Please use the OTP-based password reset."
             };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured")));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expiration = DateTime.UtcNow.AddMinutes(10);
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: expiration,
-                signingCredentials: creds
-            );
-
-            var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-            string resetLink = $"{_configuration["Frontend:ResetPasswordUrl"]}?token={tokenString}";
-
-            string subject = "Password Reset Request";
-            string body = $"<p>Hi {user.FullName},</p>" +
-                          $"<p>You requested to reset your password. Click the link below to reset it. The link is valid for 10 minutes.</p>" +
-                          $"<p><a href='{resetLink}'>Reset Password</a></p>" +
-                          $"<p>If you didn't request this, please ignore this email.</p>";
-
-            await _emailService.SendMailAsync(user.Email, subject, body);
-
-            return true;
         }
 
         public async Task<bool> IsEmailTaken(string email)
