@@ -21,6 +21,17 @@ namespace LibraryManagement.API
             var builder = WebApplication.CreateBuilder(args);
             var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
             // Add services to the container.
+            builder.Services.AddScoped<IReservationService, ReservationService>(); // binhtt
+            builder.Services.AddScoped<ILoanService, LoanService>(); //binhtt
+
+            builder.Services.AddControllers().AddOData(opt => opt
+                .Select()
+                .Filter()
+                .OrderBy()
+                .Expand()
+                .Count()
+                .SetMaxTop(100)
+            ); //binhtt
 
             builder.Services.AddControllers()
                 .AddOData(opt =>
@@ -82,6 +93,8 @@ namespace LibraryManagement.API
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
+
+            app.UseCors("AllowAll");
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
