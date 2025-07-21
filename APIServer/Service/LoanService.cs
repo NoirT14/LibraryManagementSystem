@@ -28,6 +28,24 @@ namespace APIServer.Service
                 return null;
             }
 
+            var isCopyAlreadyLoaned = await _context.Loans
+                .Where(l => l.CopyId == dto.CopyId && (l.LoanStatus == "Borrowed" || l.LoanStatus == "Overdue"))
+                .AnyAsync();
+
+            if (isCopyAlreadyLoaned)
+            {
+                return null;
+            }
+
+            var currentActiveLoansCount = await _context.Loans
+                .Where(l => l.UserId == dto.UserId && (l.LoanStatus == "Borrowed" || l.LoanStatus == "Overdue"))
+                .CountAsync();
+
+            if (currentActiveLoansCount >= 5)
+            {
+                return null;
+            }
+
             var loan = new Loan
             {
                 UserId = dto.UserId,

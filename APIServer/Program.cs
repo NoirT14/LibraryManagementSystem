@@ -5,8 +5,6 @@ using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.OData;
 using APIServer.Repositories;
 using APIServer.Repositories.Interfaces;
-using APIServer.Service;
-using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
