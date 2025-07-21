@@ -9,15 +9,38 @@ namespace APIServer.Service
     public class LoanService : ILoanService
     {
         private readonly LibraryDatabaseContext _context;
+        private readonly IReservationService _reservationService;
+
+        // FIX 1: Add lock for thread safety
+        private static readonly object _penaltyLock = new object();
         private static DateTime LastPenaltyUpdateDate = DateTime.MinValue;
 
-        public LoanService(LibraryDatabaseContext context)
+        public LoanService(LibraryDatabaseContext context, IReservationService reservationService)
         {
             _context = context;
+            _reservationService = reservationService;
         }
 
-        public async Task<Loan?> CreateLoanAsync(LoanCreateDTO dto)
+        // FIX 2: Add validation and better error handling
+        public async Task<LoanListDTO?> CreateLoanAsync(LoanCreateDTO dto)
         {
+            // Validate input
+            if (dto.DueDate <= DateTime.Now)
+            {
+                throw new ArgumentException("Due date must be in the future");
+            }
+
+            var copy = await _context.BookCopies.FindAsync(dto.CopyId);
+            if (copy == null)
+            {
+                throw new ArgumentException($"Book copy {dto.CopyId} not found");
+            }
+
+            if (copy.CopyStatus != "Available")
+            {
+                return null;
+            }
+
             var hasUnpaidFines = await _context.Loans
                 .Where(l => l.UserId == dto.UserId &&
                            (l.LoanStatus == "Overdue" || (l.FineAmount > 0 && l.LoanStatus != "Returned")))
@@ -28,58 +51,106 @@ namespace APIServer.Service
                 return null;
             }
 
-            var isCopyAlreadyLoaned = await _context.Loans
-                .Where(l => l.CopyId == dto.CopyId && (l.LoanStatus == "Borrowed" || l.LoanStatus == "Overdue"))
-                .AnyAsync();
-
-            if (isCopyAlreadyLoaned)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                return null;
-            }
-
-            var currentActiveLoansCount = await _context.Loans
-                .Where(l => l.UserId == dto.UserId && (l.LoanStatus == "Borrowed" || l.LoanStatus == "Overdue"))
-                .CountAsync();
-
-            if (currentActiveLoansCount >= 5)
-            {
-                return null;
-            }
-
-            var loan = new Loan
-            {
-                UserId = dto.UserId,
-                CopyId = dto.CopyId,
-                BorrowDate = DateTime.Now,
-                DueDate = dto.DueDate,
-                LoanStatus = "Borrowed",
-                ReservationId = dto.ReservationId
-            };
-
-            _context.Loans.Add(loan);
-
-            if (dto.ReservationId.HasValue)
-            {
-                var reservation = await _context.Reservations.FindAsync(dto.ReservationId.Value);
-                if (reservation != null)
+                var loan = new Loan
                 {
-                    reservation.ReservationStatus = "Fulfilled";
-                    reservation.FulfilledCopyId = dto.CopyId;
-                }
-            }
+                    UserId = dto.UserId,
+                    CopyId = dto.CopyId,
+                    BorrowDate = DateTime.Now,
+                    DueDate = dto.DueDate,
+                    LoanStatus = "Borrowed",
+                    ReservationId = dto.ReservationId,
+                    FineAmount = 0,
+                    Extended = false
+                };
 
-            await _context.SaveChangesAsync();
-            return loan;
+                _context.Loans.Add(loan);
+                copy.CopyStatus = "Borrowed";
+
+                if (dto.ReservationId.HasValue)
+                {
+                    var reservation = await _context.Reservations.FindAsync(dto.ReservationId.Value);
+                    if (reservation != null)
+                    {
+                        reservation.ReservationStatus = "Fulfilled";
+                        reservation.FulfilledCopyId = dto.CopyId;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                // Load full entity for DTO mapping
+                var fullLoan = await _context.Loans
+                    .Include(l => l.User)
+                    .Include(l => l.Copy)
+                        .ThenInclude(c => c.Variant)
+                            .ThenInclude(v => v.Volume)
+                                .ThenInclude(vol => vol.Book)
+                                    .ThenInclude(book => book.Authors)
+                    .FirstOrDefaultAsync(l => l.LoanId == loan.LoanId);
+
+                if (fullLoan == null)
+                    return null;
+
+                return new LoanListDTO
+                {
+                    LoanId = fullLoan.LoanId,
+                    BorrowDate = fullLoan.BorrowDate,
+                    DueDate = fullLoan.DueDate,
+                    ReturnDate = fullLoan.ReturnDate,
+                    LoanStatus = fullLoan.LoanStatus,
+                    FineAmount = fullLoan.FineAmount ?? 0,
+                    Extended = fullLoan.Extended ?? false,
+
+                    Username = fullLoan.User.Username,
+                    FullName = fullLoan.User.FullName,
+                    Email = fullLoan.User.Email,
+
+                    Barcode = fullLoan.Copy.Barcode,
+                    Title = fullLoan.Copy.Variant.Volume.Book.Title,
+                    VolumeTitle = fullLoan.Copy.Variant.Volume.VolumeTitle ?? "",
+                    Authors = fullLoan.Copy.Variant.Volume.Book.Authors.Select(a => a.AuthorName).ToList()
+                };
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                Console.WriteLine($"Error creating loan: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<bool> ReturnLoanAsync(int loanId)
         {
-            var loan = await _context.Loans.FindAsync(loanId);
+            var loan = await _context.Loans
+                .Include(l => l.Copy)
+                .FirstOrDefaultAsync(l => l.LoanId == loanId);
+
             if (loan == null || loan.LoanStatus == "Returned")
                 return false;
 
             loan.LoanStatus = "Returned";
             loan.ReturnDate = DateTime.Now;
+
+            if (loan.Copy != null)
+            {
+                loan.Copy.CopyStatus = "Available";
+
+                // FIX 4: Get variant ID correctly
+                var variantId = loan.Copy.VariantId;
+
+                // Check if there are pending reservations
+                var hasPendingReservations = await _context.Reservations
+                    .AnyAsync(r => r.VariantId == variantId && r.ReservationStatus == "Pending");
+
+                if (hasPendingReservations)
+                {
+                    await _reservationService.NotifyNextReservationAsync(variantId);
+                }
+            }
 
             await _context.SaveChangesAsync();
             return true;
@@ -117,17 +188,17 @@ namespace APIServer.Service
                     BookId = c.Variant.Volume.BookId,
 
                     Title = c.Variant.Volume.Book.Title,
-                    VolumeTitle = c.Variant.Volume.VolumeTitle,
+                    VolumeTitle = c.Variant.Volume.VolumeTitle ?? "",
                     Authors = c.Variant.Volume.Book.Authors.Select(ba => ba.AuthorName).ToList(),
 
                     PublisherName = c.Variant.Publisher.PublisherName,
-                    EditionName = c.Variant.Edition.EditionName,
+                    EditionName = c.Variant.Edition != null ? c.Variant.Edition.EditionName : "",
                     PublicationYear = c.Variant.PublicationYear,
-                    CoverTypeName = c.Variant.CoverType.CoverTypeName,
-                    PaperQualityName = c.Variant.PaperQuality.PaperQualityName,
+                    CoverTypeName = c.Variant.CoverType != null ? c.Variant.CoverType.CoverTypeName : "",
+                    PaperQualityName = c.Variant.PaperQuality != null ? c.Variant.PaperQuality.PaperQualityName : "",
                     Price = c.Variant.Price,
-                    ISBN = c.Variant.Isbn,
-                    Notes = c.Variant.Notes
+                    ISBN = c.Variant.Isbn ?? "",
+                    Notes = c.Variant.Notes ?? ""
                 })
                 .FirstOrDefaultAsync();
 
@@ -144,17 +215,21 @@ namespace APIServer.Service
                     Username = u.Username,
                     FullName = u.FullName,
                     Email = u.Email,
-                    Phone = u.Phone
+                    Phone = u.Phone ?? ""
                 })
                 .FirstOrDefaultAsync();
         }
 
         public IQueryable<LoanListDTO> GetAllLoans()
         {
-            if (LastPenaltyUpdateDate.Date < DateTime.Today)
+            // FIX 5: Thread-safe penalty update
+            lock (_penaltyLock)
             {
-                UpdatePenaltiesAndStatuses();
-                LastPenaltyUpdateDate = DateTime.Today;
+                if (LastPenaltyUpdateDate.Date < DateTime.Today)
+                {
+                    UpdatePenaltiesAndStatuses();
+                    LastPenaltyUpdateDate = DateTime.Today;
+                }
             }
 
             return _context.Loans
@@ -171,8 +246,8 @@ namespace APIServer.Service
                     DueDate = l.DueDate,
                     ReturnDate = l.ReturnDate,
                     LoanStatus = l.LoanStatus,
-                    FineAmount = (decimal)l.FineAmount,
-                    Extended = (bool)l.Extended,
+                    FineAmount = l.FineAmount ?? 0,
+                    Extended = l.Extended ?? false,
 
                     Username = l.User.Username,
                     FullName = l.User.FullName,
@@ -180,47 +255,55 @@ namespace APIServer.Service
 
                     Barcode = l.Copy.Barcode,
                     Title = l.Copy.Variant.Volume.Book.Title,
-                    VolumeTitle = l.Copy.Variant.Volume.VolumeTitle,
+                    VolumeTitle = l.Copy.Variant.Volume.VolumeTitle ?? "",
                     Authors = l.Copy.Variant.Volume.Book.Authors.Select(ba => ba.AuthorName).ToList()
                 });
         }
 
         private void UpdatePenaltiesAndStatuses()
         {
-            var toBeOverdue = _context.Loans
-                .Where(l => l.LoanStatus == "Borrowed" && l.DueDate < DateTime.Today)
-                .ToList();
-
-            foreach (var loan in toBeOverdue)
+            try
             {
-                loan.LoanStatus = "Overdue";
+                var toBeOverdue = _context.Loans
+                    .Where(l => l.LoanStatus == "Borrowed" && l.DueDate < DateTime.Today)
+                    .ToList();
+
+                foreach (var loan in toBeOverdue)
+                {
+                    loan.LoanStatus = "Overdue";
+                }
+
+                _context.SaveChanges();
+
+                var overdueLoans = _context.Loans
+                    .Include(l => l.Copy)
+                        .ThenInclude(c => c.Variant)
+                    .Where(l => l.LoanStatus == "Overdue")
+                    .ToList();
+
+                foreach (var loan in overdueLoans)
+                {
+                    int daysLate = (DateTime.Today - loan.DueDate.Date).Days;
+                    decimal fine = daysLate * 5000;
+
+                    decimal maxPrice = loan.Copy?.Variant?.Price ?? 0;
+                    if (fine > maxPrice && maxPrice > 0)
+                    {
+                        loan.FineAmount = maxPrice;
+                    }
+                    else
+                    {
+                        loan.FineAmount = fine;
+                    }
+                }
+
+                _context.SaveChanges();
             }
-
-            _context.SaveChanges();
-
-            var overdueLoans = _context.Loans
-                .Include(l => l.Copy)
-                    .ThenInclude(c => c.Variant)
-                .Where(l => l.LoanStatus == "Overdue")
-                .ToList();
-
-            foreach (var loan in overdueLoans)
+            catch (Exception ex)
             {
-                int daysLate = (DateTime.Today - loan.DueDate.Date).Days;
-                decimal fine = daysLate * 5000;
-
-                decimal maxPrice = loan.Copy?.Variant?.Price ?? 0;
-                if (fine > maxPrice)
-                {
-                    loan.FineAmount = maxPrice;
-                }
-                else
-                {
-                    loan.FineAmount = fine;
-                }
+                // Log error but don't crash
+                Console.WriteLine($"Error updating penalties: {ex.Message}");
             }
-
-            _context.SaveChanges();
         }
 
         public async Task<int> GetLoansCountAsync(string? keyword)
@@ -245,11 +328,16 @@ namespace APIServer.Service
         public async Task<bool> ExtendLoanAsync(int loanId)
         {
             var loan = await _context.Loans.FindAsync(loanId);
-            if (loan == null) return false;
-            if (loan.Extended == null) loan.Extended = false;
-            if ((bool)loan.Extended) return false;
+            if (loan == null || loan.LoanStatus == "Returned")
+                return false;
+
+            // Check if already extended
+            if (loan.Extended == true)
+                return false;
+
             loan.DueDate = loan.DueDate.AddDays(7);
             loan.Extended = true;
+
             await _context.SaveChangesAsync();
             return true;
         }
@@ -260,6 +348,10 @@ namespace APIServer.Service
             if (loan == null) return false;
 
             loan.FineAmount = 0;
+
+            // If loan is overdue but fine is paid, keep status as Overdue
+            // Don't change to Borrowed unless book is returned
+
             await _context.SaveChangesAsync();
             return true;
         }
@@ -281,8 +373,8 @@ namespace APIServer.Service
                     DueDate = l.DueDate,
                     ReturnDate = l.ReturnDate,
                     LoanStatus = l.LoanStatus,
-                    FineAmount = (decimal)l.FineAmount,
-                    Extended = (bool)l.Extended,
+                    FineAmount = l.FineAmount ?? 0,
+                    Extended = l.Extended ?? false,
 
                     Username = l.User.Username,
                     FullName = l.User.FullName,
@@ -290,7 +382,7 @@ namespace APIServer.Service
 
                     Barcode = l.Copy.Barcode,
                     Title = l.Copy.Variant.Volume.Book.Title,
-                    VolumeTitle = l.Copy.Variant.Volume.VolumeTitle,
+                    VolumeTitle = l.Copy.Variant.Volume.VolumeTitle ?? "",
                     Authors = l.Copy.Variant.Volume.Book.Authors.Select(ba => ba.AuthorName).ToList()
                 })
                 .FirstOrDefaultAsync();
@@ -311,5 +403,43 @@ namespace APIServer.Service
             return true;
         }
 
+        public async Task<bool> CanUserBorrowDirectlyAsync(int userId, int variantId)
+        {
+            var pendingReservations = await _context.Reservations
+                .Where(r => r.VariantId == variantId && r.ReservationStatus == "Pending")
+                .OrderBy(r => r.ReservationDate)
+                .ToListAsync();
+
+            if (!pendingReservations.Any())
+                return true;
+
+            var firstReservation = pendingReservations.First();
+            return firstReservation.UserId == userId;
+        }
+
+        public async Task<List<BookCopyDTO>> GetAvailableCopiesAsync(int variantId)
+        {
+            return await _context.BookCopies
+                .Where(c => c.VariantId == variantId && c.CopyStatus == "Available")
+                .Select(c => new BookCopyDTO
+                {
+                    CopyId = c.CopyId,
+                    Barcode = c.Barcode,
+                    Location = c.Location,
+                    CopyStatus = c.CopyStatus,
+                    VariantId = c.VariantId
+                })
+                .ToListAsync();
+        }
+
+        public async Task UpdateCopyStatusAsync(int copyId, string status)
+        {
+            var copy = await _context.BookCopies.FindAsync(copyId);
+            if (copy != null)
+            {
+                copy.CopyStatus = status;
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

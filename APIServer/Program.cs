@@ -1,11 +1,19 @@
-
+﻿
+using APIServer.Configs;
 using APIServer.Data;
+using APIServer.Repositories;
+using APIServer.Repositories.Interfaces;
 using APIServer.Service;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.OData;
 using APIServer.Repositories;
 using APIServer.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.OData;
+using APIServer.Service;
+using APIServer.Service.Interfaces;
+using Microsoft.AspNetCore.OData;
+>>>>>>>>> Temporary merge branch 2
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
@@ -32,6 +40,12 @@ namespace LibraryManagement.API
                 .SetMaxTop(100)
             ); //binhtt
 
+            builder.Services.AddControllers()
+                .AddOData(opt =>
+                {
+                    opt.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100)
+                        .AddRouteComponents("odata", ODataConfig.GetEdmModel());
+                });
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -75,11 +89,15 @@ namespace LibraryManagement.API
 
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddScoped(typeof(IUserRepository), typeof(UserRepository));
+            builder.Services.AddScoped<IBookService, BookService>();
+            builder.Services.AddScoped<IReservationService, ReservationService>();
+            builder.Services.AddScoped<ILoanService, LoanService>();
+            builder.Services.AddHostedService<SessionCleanupService>();
 
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
-            builder.Services.AddScoped<IUserService, UserService>();
+                });
+            });
 
+>>>>>>>>> Temporary merge branch 2
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 

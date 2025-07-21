@@ -5,7 +5,7 @@ namespace APIServer.Service.Interfaces
 {
     public interface ILoanService
     {
-        Task<Loan> CreateLoanAsync(LoanCreateDTO dto);
+        Task<LoanListDTO> CreateLoanAsync(LoanCreateDTO dto);
         Task<bool> ReturnLoanAsync(int loanId);
         Task<IEnumerable<Loan>> GetUserLoansAsync(int userId);
         Task<BookInfoDTO?> GetBookByBarcodeAsync(string barcode);
@@ -16,5 +16,8 @@ namespace APIServer.Service.Interfaces
         Task<bool> PayFineAsync(int loanId);
         Task<LoanListDTO?> GetLoanByIdAsync(int id);
         Task<bool> UpdateLoanAsync(int loanId, LoanEditDTO dto);
+        Task<bool> CanUserBorrowDirectlyAsync(int userId, int variantId);
+        Task<List<BookCopyDTO>> GetAvailableCopiesAsync(int variantId);
+        Task UpdateCopyStatusAsync(int copyId, string status);
     }
 }
