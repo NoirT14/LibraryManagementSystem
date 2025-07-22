@@ -17,6 +17,8 @@ public partial class Book
 
     public string? Description { get; set; }
 
+    public string? CoverImg { get; set; }
+
     public virtual ICollection<BookVolume> BookVolumes { get; set; } = new List<BookVolume>();
 
     public virtual Category Category { get; set; } = null!;

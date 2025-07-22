@@ -46,10 +46,6 @@ public partial class LibraryDatabaseContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=143.198.221.5,1433;Database=LibraryDatabase;User Id=sa;Password=@Anhngoc2003;Encrypt=True;TrustServerCertificate=True");
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Author>(entity =>
@@ -83,6 +79,9 @@ public partial class LibraryDatabaseContext : DbContext
             entity.Property(e => e.Title)
                 .HasMaxLength(255)
                 .HasColumnName("title");
+            entity.Property(e => e.CoverImg)
+                .HasMaxLength(200)
+                .HasColumnName("cover_img");
 
             entity.HasOne(d => d.Category).WithMany(p => p.Books)
                 .HasForeignKey(d => d.CategoryId)
