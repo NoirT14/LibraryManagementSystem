@@ -4,6 +4,7 @@ using APIServer.Models;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace APIServer.Service
 {
@@ -128,7 +129,6 @@ namespace APIServer.Service
                 .FirstOrDefaultAsync(b => b.BookId == id);
 
             if (book == null) return null;
-
             var variantDtos = book.BookVolumes
     .SelectMany(v => v.BookVariants ?? new List<BookVariant>())
     .Select(variant =>

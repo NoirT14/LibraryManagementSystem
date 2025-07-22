@@ -1,10 +1,16 @@
-﻿namespace APIServer.Service.Interfaces
+﻿using APIServer.DTO.Loan;
+using APIServer.Models;
+
+namespace APIServer.Service.Interfaces
 {
     public interface ILoanService
     {
-        Task BorrowBookAsync(int userId, int copyId);
-        Task ReturnBookAsync(int loanId);
+       
         Task SendDueDateRemindersAsync();
+        Task SendFineNotificationsAsync();
+        Task UpdateOverdueLoansAndFinesAsync();
+
+        Task<List<LoanWithVolumeDto>> GetLoansWithVolumeByUserIdAsync(int userId);
 
     }
 }
