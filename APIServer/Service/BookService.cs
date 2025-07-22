@@ -5,7 +5,7 @@ using APIServer.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System;
 
-namespace APIServer.Services
+namespace APIServer.Service
 {
     public class BookService : IBookService
     {
@@ -24,28 +24,27 @@ namespace APIServer.Services
                 .Include(b => b.BookVolumes)
                     .ThenInclude(v => v.BookVariants)
                         .ThenInclude(v => v.BookCopies)
+                .Select(b => new HomepageBookDTO
+                {
+                    BookId = b.BookId,
+                    Title = b.Title,
+                    Description = b.Description,
+                    Language = b.Language,
+                    Status = b.BookStatus,
+                    CategoryName = b.Category.CategoryName,
+                    Authors = b.Authors.Select(a => a.AuthorName).ToList(),
+                    TotalCopies = b.BookVolumes
+                        .SelectMany(v => v.BookVariants)
+                        .SelectMany(v => v.BookCopies)
+                        .Count(),
+                    AvailableCopies = b.BookVolumes
+                        .SelectMany(v => v.BookVariants)
+                        .SelectMany(v => v.BookCopies)
+                        .Count(c => c.CopyStatus == "Available")
+                })
                 .ToListAsync();
 
-            var result = books.Select(b => new HomepageBookDTO
-            {
-                BookId = b.BookId,
-                Title = b.Title,
-                Description = b.Description,
-                Language = b.Language,
-                Status = b.BookStatus,
-                CategoryName = b.Category?.CategoryName, // ✅ Dùng null-safe
-                Authors = b.Authors?.Select(a => a.AuthorName).ToList() ?? new List<string>(), // ✅ Chống null
-                TotalCopies = b.BookVolumes
-                    .SelectMany(v => v.BookVariants)
-                    .SelectMany(v => v.BookCopies)
-                    .Count(),
-                AvailableCopies = b.BookVolumes
-                    .SelectMany(v => v.BookVariants)
-                    .SelectMany(v => v.BookCopies)
-                    .Count(c => c.CopyStatus == "Available")
-            }).ToList();
-
-            return result;
+            return books;
         }
 
         public async Task<BookDetailDTO?> GetBookDetailByIdAsync(int id)
@@ -96,4 +95,5 @@ namespace APIServer.Services
         }
 
     }
+
 }

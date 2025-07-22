@@ -15,5 +15,6 @@ namespace APIServer.Service.Interfaces
         Task UpdateUserByAdminAsync(AdminUpdateUserRequestDTO updateUserByAdminRequest);
         Task ResetPasswordAsync(AdminResetPasswordRequestDTO resetPasswordRequest);
         Task DeleteUserAsync(int userId);
+        Task<AdminUserPaginatedResponseDTO> GetUsersPagedAsync(int page, int pageSize);
     }
 }

@@ -155,5 +155,29 @@ namespace APIServer.Service
             await _userRepository.UpdateAsync(user);
             await _userRepository.SaveChangesAsync();
         }
+
+        public async Task<AdminUserPaginatedResponseDTO> GetUsersPagedAsync(int page, int pageSize)
+        {
+            var (users, totalCount) = await _userRepository.GetUsersWithRolesPagedAsync(page, pageSize);
+
+            return new AdminUserPaginatedResponseDTO
+            {
+                Items = users.Select(x => new AdminUserResponseDTO
+                {
+                    UserId = x.UserId,
+                    Username = x.Username,
+                    FullName = x.FullName,
+                    Email = x.Email,
+                    Phone = x.Phone,
+                    Address = x.Address,
+                    RoleName = x.Role?.RoleName ?? "",
+                    IsActive = x.IsActive,
+                    CreateDate = x.CreateDate,
+                }).ToList(),
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
     }
 }

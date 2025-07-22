@@ -30,5 +30,18 @@ namespace APIServer.Repositories
             return await _context.Users
                 .FirstOrDefaultAsync(u => u.Username.ToLower() == username.ToLower());
         }
+        public async Task<(List<User> Items, int TotalCount)> GetUsersWithRolesPagedAsync(int page, int pageSize)
+        {
+            var query = _context.Users.Include(u => u.Role).AsQueryable();
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderBy(u => u.UserId)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
     }
 }
