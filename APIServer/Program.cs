@@ -6,15 +6,14 @@ using APIServer.Models;
 using APIServer.Repositories;
 using APIServer.Repositories.Interfaces;
 using APIServer.Service;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.OData;
+using Microsoft.OData.ModelBuilder;
 using APIServer.Service.Interfaces;
 using APIServer.Service.Jobs;
-using APIServer.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.OData;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OData.Edm;
-using Microsoft.OData.ModelBuilder;
 using System.Text;
 
 namespace LibraryManagement.API
@@ -25,22 +24,40 @@ namespace LibraryManagement.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddControllers()
-    .AddOData(opt => opt
-        .Select()
-        .Filter()
-        .OrderBy()
-        .Count()
-        .Expand()
-        .SetMaxTop(100)
-        .AddRouteComponents("api", GetEdmModel()));
-
             // Add services to the container.
             builder.Services.AddControllers();
+
+            builder.Services.AddControllers()
+                .AddJsonOptions(opt =>
+    {
+        opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+        opt.JsonSerializerOptions.WriteIndented = true;
+    });
+
+
+            builder.Services.AddControllers().AddOData(opt =>
+            {
+                var builderOdata = new ODataConventionModelBuilder();
+                builderOdata.EntitySet<Book>("Books");
+                builderOdata.EntitySet<Category>("Categories");
+                builderOdata.EntitySet<Author>("Authors");
+                builderOdata.EntitySet<BookVolume>("BookVolumes");
+                opt.AddRouteComponents("odata", builderOdata.GetEdmModel());
+                opt.Select().Expand().Filter().OrderBy().Count().SetMaxTop(100);
+            });
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
+
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-          
 
             //add jwt
             builder.Services.AddAuthentication(options =>
@@ -72,8 +89,6 @@ namespace LibraryManagement.API
 
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddScoped(typeof(IUserRepository), typeof(UserRepository));
-
-
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
           
@@ -92,12 +107,15 @@ namespace LibraryManagement.API
             builder.Services.AddScoped(typeof(APIServer.Repositories.Interfaces.IRepository<>), typeof(APIServer.Repositories.Repository<>));
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<ILoanService, LoanService>();
+            builder.Services.AddScoped<IBookService, BookService>();
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+            builder.Services.AddScoped<ICoverTypeService, CoverTypeService>();
+            builder.Services.AddScoped<IPaperQualityService, PaperQualityService>();
+            builder.Services.AddScoped<IPublisherService, PublisherService>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IBookVariantService, BookVariantService>();
-            builder.Services.AddScoped<IBookService, BookService>();
-
 
             builder.Services.AddHostedService<NotificationJob>();
 
@@ -120,6 +138,8 @@ namespace LibraryManagement.API
             app.UseAuthorization();
 
             app.MapControllers();
+
+            app.UseCors("AllowAll");
 
             app.Run();
 

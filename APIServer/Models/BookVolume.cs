@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace APIServer.Models;
 
 public partial class BookVolume
 {
+    [Key]
     public int VolumeId { get; set; }
 
     public int BookId { get; set; }
