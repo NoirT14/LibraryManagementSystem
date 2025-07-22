@@ -103,7 +103,6 @@ namespace LibraryManagement.API
             });
             builder.Services.AddScoped<IAuthService, AuthService>(); 
 
-            builder.Services.AddScoped<IBookVolumeService, BookVolumeService>();
             builder.Services.AddScoped(typeof(APIServer.Repositories.Interfaces.IRepository<>), typeof(APIServer.Repositories.Repository<>));
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<ILoanService, LoanService>();
