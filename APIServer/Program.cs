@@ -25,7 +25,21 @@ namespace LibraryManagement.API
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+
+            builder.Services.AddScoped<IReservationService, ReservationService>(); // binhtt
+            builder.Services.AddScoped<ILoanService, LoanService>(); //binhtt
+
+            builder.Services.AddControllers().AddOData(opt => opt
+                .Select()
+                .Filter()
+                .OrderBy()
+                .Expand()
+                .Count()
+                .SetMaxTop(100)
+            ); //binhtt
+
             builder.Services.AddControllers();
+
 
             builder.Services.AddControllers()
                 .AddJsonOptions(opt =>
@@ -107,6 +121,8 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<ILoanService, LoanService>();
             builder.Services.AddScoped<IBookService, BookService>();
+
+            builder.Services.AddHostedService<SessionCleanupService>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ICoverTypeService, CoverTypeService>();
             builder.Services.AddScoped<IPaperQualityService, PaperQualityService>();
@@ -116,9 +132,12 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IBookVariantService, BookVariantService>();
 
+
             builder.Services.AddHostedService<NotificationJob>();
 
             var app = builder.Build();
+
+            app.UseCors("AllowAll");
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
