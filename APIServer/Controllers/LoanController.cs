@@ -1,4 +1,6 @@
-﻿using APIServer.Service.Interfaces;
+﻿using APIServer.DTO.Loan;
+using APIServer.Models;
+using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace APIServer.Controllers
@@ -20,5 +22,19 @@ namespace APIServer.Controllers
             await _loanService.SendDueDateRemindersAsync();
             return Ok("Due date reminders sent");
         }
+
+        [HttpGet("user/{userId}")]
+        public async Task<ActionResult<List<LoanWithVolumeDto>>> GetLoansByUserId(int userId)
+        {
+            var loans = await _loanService.GetLoansWithVolumeByUserIdAsync(userId);
+
+            if (loans == null || loans.Count == 0)
+            {
+                return NotFound($"No loans found for user with ID {userId}");
+            }
+
+            return Ok(loans);
+        }
+
     }
 }

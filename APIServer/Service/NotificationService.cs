@@ -72,21 +72,12 @@ namespace APIServer.Service
         }
 
 
-        public async Task<bool> TrackNotificationAsync(int notificationId)
+
+        public async Task<int> CountUnreadNotificationsAsync(int receiverId)
         {
-            var notification = await _context.Notifications
-                .FirstOrDefaultAsync(n => n.NotificationId == notificationId);
-
-            if (notification == null)
-                return false;
-
-            if (notification.ReadStatus == true)
-                return true; // Đã đọc rồi
-
-            notification.ReadStatus = true;
-            await _context.SaveChangesAsync();
-            Console.WriteLine($"Tracked read for notification {notificationId}.");
-            return true;
+            return await _context.Notifications
+                .Where(n => n.ReceiverId == receiverId && (n.ReadStatus == false || n.ReadStatus == null))
+                .CountAsync();
         }
     }
 }

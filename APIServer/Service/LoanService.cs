@@ -1,4 +1,5 @@
 ﻿using APIServer.Data;
+using APIServer.DTO.Loan;
 using APIServer.Models;
 using APIServer.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -205,5 +206,28 @@ Thank you.";
 
             await _context.SaveChangesAsync();
         }
+
+
+        public async Task<List<LoanWithVolumeDto>> GetLoansWithVolumeByUserIdAsync(int userId)
+        {
+            return await _context.Loans
+                .Where(l => l.UserId == userId)
+                .Include(l => l.Copy)
+                    .ThenInclude(c => c.Variant)
+                        .ThenInclude(v => v.Volume)
+                .Select(l => new LoanWithVolumeDto
+                {
+                    LoanId = l.LoanId,
+                    BorrowDate = l.BorrowDate,
+                    DueDate = l.DueDate,
+                    ReturnDate = l.ReturnDate,
+                    LoanStatus = l.LoanStatus,
+                    VolumeTitle = l.Copy.Variant.Volume.VolumeTitle,
+                    VolumeNumber = l.Copy.Variant.Volume.VolumeNumber
+                })
+                .ToListAsync();
+        }
+
+
     }
 }

@@ -1,4 +1,21 @@
 ﻿
+using APIServer.Data;
+using APIServer.DTO.Book;
+using APIServer.Models;
+using APIServer.Repositories;
+using APIServer.Repositories.Interfaces;
+using APIServer.Service;
+using APIServer.Service.Interfaces;
+using APIServer.Service.Jobs;
+using APIServer.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.OData;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OData.Edm;
+using Microsoft.OData.ModelBuilder;
+using System.Text;
+
 namespace LibraryManagement.API
 {
     public class Program
@@ -22,15 +39,7 @@ namespace LibraryManagement.API
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            //add CORS
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowFrontend", policy =>
-                    policy.WithOrigins(allowedOrigins)
-                          .AllowAnyHeader()
-                          .AllowAnyMethod()
-                );
-            });
+          
 
             //add jwt
             builder.Services.AddAuthentication(options =>
@@ -40,7 +49,7 @@ namespace LibraryManagement.API
             })
             .AddJwtBearer(options =>
             {
-                options.TokenValidationParameters = new TokenValidationParameters
+                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
@@ -63,43 +72,10 @@ namespace LibraryManagement.API
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddScoped(typeof(IUserRepository), typeof(UserRepository));
 
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
-            builder.Services.AddScoped<IUserService, UserService>();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-            //builder.Services.AddSwaggerGen(c =>
-            //{
-            //    c.SwaggerDoc("v1", new() { Title = "APIServer", Version = "v1" });
-
-            //    // Thêm security definition cho JWT Bearer
-            //    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            //    {
-            //        Description = "Nhập vào định dạng: Bearer {token}",
-            //        Name = "Authorization",
-            //        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-            //        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-            //        Scheme = "bearer",
-            //        BearerFormat = "JWT"
-            //    });
-
-            //    // Bắt Swagger UI luôn gửi kèm token
-            //    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-            //    {
-            //        {
-            //            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            //            {
-            //                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-            //                {
-            //                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-            //                    Id = "Bearer"
-            //                }
-            //            },
-            //            Array.Empty<string>()
-            //        }
-            //    });
-            //            });
+          
 
             // Thêm cấu hình CORS ở đây
             builder.Services.AddCors(options =>
@@ -109,7 +85,7 @@ namespace LibraryManagement.API
                                     .AllowAnyHeader()
                                     .AllowAnyMethod());
             });
-
+            builder.Services.AddScoped<IAuthService, AuthService>(); 
 
             builder.Services.AddScoped<IBookVolumeService, BookVolumeService>();
             builder.Services.AddScoped(typeof(APIServer.Repositories.Interfaces.IRepository<>), typeof(APIServer.Repositories.Repository<>));
@@ -133,7 +109,7 @@ namespace LibraryManagement.API
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
             app.UseCors("AllowFrontend");
 
             // Thêm middleware CORS ngay trước UseAuthorization
