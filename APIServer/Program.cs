@@ -1,15 +1,19 @@
 ﻿
 using APIServer.Configs;
 using APIServer.Data;
+using APIServer.DTO.Book;
+using APIServer.Models;
 using APIServer.Repositories;
 using APIServer.Repositories.Interfaces;
 using APIServer.Service;
-using APIServer.Service.Interfaces;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.AspNetCore.OData;
+using Microsoft.OData.ModelBuilder;
+using APIServer.Service.Interfaces;
+using APIServer.Service.Jobs;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OData.Edm;
 using System.Text;
 
 namespace LibraryManagement.API
@@ -19,8 +23,9 @@ namespace LibraryManagement.API
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+
             // Add services to the container.
+
             builder.Services.AddScoped<IReservationService, ReservationService>(); // binhtt
             builder.Services.AddScoped<ILoanService, LoanService>(); //binhtt
 
@@ -33,24 +38,40 @@ namespace LibraryManagement.API
                 .SetMaxTop(100)
             ); //binhtt
 
-            builder.Services.AddControllers()
-                .AddOData(opt =>
-                {
-                    opt.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100)
-                        .AddRouteComponents("odata", ODataConfig.GetEdmModel());
-                });
-            builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            builder.Services.AddControllers();
 
-            //add CORS
+
+            builder.Services.AddControllers()
+                .AddJsonOptions(opt =>
+    {
+        opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+        opt.JsonSerializerOptions.WriteIndented = true;
+    });
+
+
+            builder.Services.AddControllers().AddOData(opt =>
+            {
+                var builderOdata = new ODataConventionModelBuilder();
+                builderOdata.EntitySet<Book>("Books");
+                builderOdata.EntitySet<Category>("Categories");
+                builderOdata.EntitySet<Author>("Authors");
+                builderOdata.EntitySet<BookVolume>("BookVolumes");
+                opt.AddRouteComponents("odata", builderOdata.GetEdmModel());
+                opt.Select().Expand().Filter().OrderBy().Count().SetMaxTop(100);
+            });
+
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowFrontend", policy =>
-                    policy.WithOrigins(allowedOrigins)
-                          .AllowAnyHeader()
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
                           .AllowAnyMethod()
-                );
+                          .AllowAnyHeader();
+                });
             });
+
+            builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             //add jwt
             builder.Services.AddAuthentication(options =>
@@ -60,7 +81,7 @@ namespace LibraryManagement.API
             })
             .AddJwtBearer(options =>
             {
-                options.TokenValidationParameters = new TokenValidationParameters
+                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
@@ -82,17 +103,37 @@ namespace LibraryManagement.API
 
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddScoped(typeof(IUserRepository), typeof(UserRepository));
-
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
-            builder.Services.AddScoped<IUserService, UserService>();
-            builder.Services.AddScoped<IBookService, BookService>();
-            builder.Services.AddScoped<IReservationService, ReservationService>();
-            builder.Services.AddScoped<ILoanService, LoanService>();
-            builder.Services.AddHostedService<SessionCleanupService>();
-
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+          
+
+            // Thêm cấu hình CORS ở đây
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowLocalhost3000",
+                    policy => policy.WithOrigins("http://localhost:3000")
+                                    .AllowAnyHeader()
+                                    .AllowAnyMethod());
+            });
+            builder.Services.AddScoped<IAuthService, AuthService>(); 
+
+            builder.Services.AddScoped(typeof(APIServer.Repositories.Interfaces.IRepository<>), typeof(APIServer.Repositories.Repository<>));
+            builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<ILoanService, LoanService>();
+            builder.Services.AddScoped<IBookService, BookService>();
+
+            builder.Services.AddHostedService<SessionCleanupService>();
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+            builder.Services.AddScoped<ICoverTypeService, CoverTypeService>();
+            builder.Services.AddScoped<IPaperQualityService, PaperQualityService>();
+            builder.Services.AddScoped<IPublisherService, PublisherService>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddScoped<IReservationService, ReservationService>();
+            builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IBookVariantService, BookVariantService>();
+
+
+            builder.Services.AddHostedService<NotificationJob>();
 
             var app = builder.Build();
 
@@ -105,15 +146,31 @@ namespace LibraryManagement.API
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
             app.UseCors("AllowFrontend");
+
+            // Thêm middleware CORS ngay trước UseAuthorization
+            app.UseCors("AllowLocalhost3000");
 
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();
 
+            app.UseCors("AllowAll");
+
             app.Run();
+
+        }
+        static IEdmModel GetEdmModel()
+        {
+            var builder = new ODataConventionModelBuilder();
+            builder.EntitySet<BookVolumeDTO>("BookVolumes");
+            builder.EntitySet<HomepageBookDTO>("Books");
+            builder.EntitySet<Notification>("notifications");
+
+            return builder.GetEdmModel();
         }
     }
+
 }

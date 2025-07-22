@@ -14,5 +14,6 @@ namespace APIServer.DTO.Book
         public List<string> Authors { get; set; } = new();
         public int TotalCopies { get; set; }
         public int AvailableCopies { get; set; }
+
     }
 }

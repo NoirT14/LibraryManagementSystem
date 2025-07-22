@@ -1,10 +1,13 @@
+
 ﻿using APIServer.DTO.Loans;
+
 using APIServer.Models;
 
 namespace APIServer.Service.Interfaces
 {
     public interface ILoanService
     {
+
         Task<LoanListDTO> CreateLoanAsync(LoanCreateDTO dto);
         Task<bool> ReturnLoanAsync(int loanId);
         Task<IEnumerable<Loan>> GetUserLoansAsync(int userId);
@@ -19,5 +22,13 @@ namespace APIServer.Service.Interfaces
         Task<bool> CanUserBorrowDirectlyAsync(int userId, int variantId);
         Task<List<BookCopyDTO>> GetAvailableCopiesAsync(int variantId);
         Task UpdateCopyStatusAsync(int copyId, string status);
+
+       
+        Task SendDueDateRemindersAsync();
+        Task SendFineNotificationsAsync();
+        Task UpdateOverdueLoansAndFinesAsync();
+
+        Task<List<LoanWithVolumeDto>> GetLoansWithVolumeByUserIdAsync(int userId);
+
     }
 }

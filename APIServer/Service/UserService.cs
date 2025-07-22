@@ -1,4 +1,5 @@
-﻿using APIServer.DTO.User;
+﻿using APIServer.DTO;
+using APIServer.DTO.User;
 using APIServer.Models;
 using APIServer.Repositories.Interfaces;
 using APIServer.Service.Interfaces;
