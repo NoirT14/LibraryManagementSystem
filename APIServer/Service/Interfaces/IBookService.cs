@@ -12,8 +12,6 @@ namespace APIServer.Service.Interfaces
         Task<Book> Create(BookInfoRequest request);
         Task<Book?> Update(int id, Microsoft.AspNetCore.OData.Deltas.Delta<Book> delta);
         Task<bool> Delete(int id);
-        Task<List<HomepageBookDTO>> GetHomepageBooksAsync();
-        Task<BookDetailDTO?> GetBookDetailByIdAsync(int id);
 
         //the
         Task<int> CountTotalCopiesAsync();

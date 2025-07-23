@@ -23,18 +23,7 @@ namespace APIServer.Controllers
             return Ok("Due date reminders sent");
         }
 
-        [HttpGet("user/{userId}")]
-        public async Task<ActionResult<List<LoanWithVolumeDto>>> GetLoansByUserId(int userId)
-        {
-            var loans = await _loanService.GetLoansWithVolumeByUserIdAsync(userId);
-
-            if (loans == null || loans.Count == 0)
-            {
-                return NotFound($"No loans found for user with ID {userId}");
-            }
-
-            return Ok(loans);
-        }
+       
 
     }
 }

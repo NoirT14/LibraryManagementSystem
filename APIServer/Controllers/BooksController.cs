@@ -19,17 +19,7 @@ namespace APIServer.Controllers.OData
 
         
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<BookDetailDTO>> GetBookDetail(int id)
-        {
-            var book = await _bookService.GetBookDetailByIdAsync(id);
-            if (book == null)
-            {
-                return NotFound(new { error = "Không tìm thấy sách." });
-            }
-
-            return Ok(book);
-        }
+       
     }
 
 

@@ -17,7 +17,6 @@ namespace APIServer.Service.Interfaces
 
         Task<List<MonthlyStatDto>> GetLoansPerMonthAsync();
 
-        Task<List<LoanWithVolumeDto>> GetLoansWithVolumeByUserIdAsync(int userId);
 
     }
 }

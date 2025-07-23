@@ -21,11 +21,9 @@ namespace APIServer.Services
                 .Select(v => new BookVolumeDTO
                 {
                     VolumeId = v.VolumeId,
-                    BookId = v.BookId,
                     VolumeNumber = v.VolumeNumber,
                     VolumeTitle = v.VolumeTitle,
                     Description = v.Description,
-                    BookTitle = v.Book.Title
                 }).ToListAsync();
         }
 
@@ -37,11 +35,9 @@ namespace APIServer.Services
                 .Select(v => new BookVolumeDTO
                 {
                     VolumeId = v.VolumeId,
-                    BookId = v.BookId,
                     VolumeNumber = v.VolumeNumber,
                     VolumeTitle = v.VolumeTitle,
                     Description = v.Description,
-                    BookTitle = v.Book.Title
                 }).FirstOrDefaultAsync();
         }
     }
