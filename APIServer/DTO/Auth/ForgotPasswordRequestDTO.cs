@@ -8,6 +8,6 @@ namespace APIServer.DTO.Auth
 {
     public class ForgotPasswordRequestDTO
     {
-        public string Username { get; set; } = null!;
+        public string UsernameorEmail { get; set; } = null!;
     }
 }

@@ -8,7 +8,9 @@ namespace APIServer.DTO.Auth
 {
     public class AuthResult
     {
-        public bool ÍsSuccess { get; set; }
+        public bool IsSuccess { get; set; }
         public string? ErrorMessage { get; set; }
+
+        public LoginResponseDTO? Data { get; set; }
     }
 }
