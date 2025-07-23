@@ -14,12 +14,7 @@ namespace APIServer.Controllers
             _userService = userService;
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetUser(int id)
-        {
-            var user = await _userService.GetUserByIdAsync(id);
-            return user == null ? NotFound() : Ok(user);
-        }
+        
     }
 
 }
