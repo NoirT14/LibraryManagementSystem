@@ -199,5 +199,28 @@ namespace APIServer.Service
                 .Include(b => b.BookVolumes)
                 .FirstOrDefaultAsync(b => b.BookId == id);
         }
+
+
+        //The
+        public async Task<int> CountTotalCopiesAsync()
+        {
+            return await _context.BookCopies.CountAsync();
+        }
+
+        public async Task<Dictionary<string, int>> GetCopyStatusStatsAsync()
+        {
+            return await _context.BookCopies
+                .GroupBy(c => c.CopyStatus)
+                .Select(g => new { Status = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.Status, g => g.Count);
+        }
+        public async Task<Dictionary<string, int>> GetBookCountByCategoryAsync()
+        {
+            return await _context.Books
+                .Include(b => b.Category)
+                .GroupBy(b => b.Category.CategoryName)
+                .Select(g => new { Category = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.Category, g => g.Count);
+        }
     }
 }

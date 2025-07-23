@@ -127,7 +127,7 @@ namespace LibraryManagement.API
                 app.UseSwaggerUI();
             }
 
-            //app.UseHttpsRedirection();
+            app.UseHttpsRedirection();
             app.UseCors("AllowFrontend");
 
             // Thêm middleware CORS ngay trước UseAuthorization

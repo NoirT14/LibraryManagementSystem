@@ -12,5 +12,10 @@ namespace APIServer.Service.Interfaces
 
         Task<List<LoanWithVolumeDto>> GetLoansWithVolumeByUserIdAsync(int userId);
 
+        Task<int> CountTotalLoansAsync();
+        Task<int> CountOverdueLoansAsync();
+        Task<decimal?> GetTotalFineAmountAsync();
+
+        Task<List<MonthlyStatDto>> GetLoansPerMonthAsync();
     }
 }
