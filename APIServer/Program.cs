@@ -1,10 +1,16 @@
 ﻿
+using APIServer.Configs;
 using APIServer.Data;
 
+
+
+
+
 using Microsoft.EntityFrameworkCore;
-using APIServer.Service.Jobs;
 using Microsoft.AspNetCore.OData;
-using APIServer.DTO.Notification;
+
+
+using APIServer.Service.Jobs;
 using Microsoft.OData.Edm;
 using Microsoft.OData.ModelBuilder;
 using APIServer.Models;
@@ -31,31 +37,40 @@ namespace LibraryManagement.API
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddControllers()
-    .AddOData(opt => opt
-        .Select()
-        .Filter()
-        .OrderBy()
-        .Count()
-        .Expand()
-        .SetMaxTop(100)
-        .AddRouteComponents("api", GetEdmModel()));
-            var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
-            // Add services to the container.
+                .AddJsonOptions(opt =>
+    {
+        opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+        opt.JsonSerializerOptions.WriteIndented = true;
+    });
 
             // Add services to the container.
             builder.Services.AddControllers();
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            //add CORS
+            builder.Services.AddControllers().AddOData(opt =>
+            {
+                var builderOdata = new ODataConventionModelBuilder();
+                builderOdata.EntitySet<Book>("Books");
+                builderOdata.EntitySet<Category>("Categories");
+                builderOdata.EntitySet<Author>("Authors");
+                builderOdata.EntitySet<BookVolume>("BookVolumes");
+                opt.AddRouteComponents("odata", builderOdata.GetEdmModel());
+                opt.Select().Expand().Filter().OrderBy().Count().SetMaxTop(100);
+            });
+
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowFrontend", policy =>
-                    policy.WithOrigins(allowedOrigins)
-                          .AllowAnyHeader()
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
                           .AllowAnyMethod()
-                );
+                          .AllowAnyHeader();
+                });
             });
+
+            builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             //add jwt
             builder.Services.AddAuthentication(options =>
@@ -65,7 +80,7 @@ namespace LibraryManagement.API
             })
             .AddJwtBearer(options =>
             {
-                options.TokenValidationParameters = new TokenValidationParameters
+                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
@@ -94,37 +109,7 @@ namespace LibraryManagement.API
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-            //builder.Services.AddSwaggerGen(c =>
-            //{
-            //    c.SwaggerDoc("v1", new() { Title = "APIServer", Version = "v1" });
-
-            //    // Thêm security definition cho JWT Bearer
-            //    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            //    {
-            //        Description = "Nhập vào định dạng: Bearer {token}",
-            //        Name = "Authorization",
-            //        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-            //        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-            //        Scheme = "bearer",
-            //        BearerFormat = "JWT"
-            //    });
-
-            //    // Bắt Swagger UI luôn gửi kèm token
-            //    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-            //    {
-            //        {
-            //            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            //            {
-            //                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-            //                {
-            //                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-            //                    Id = "Bearer"
-            //                }
-            //            },
-            //            Array.Empty<string>()
-            //        }
-            //    });
-            //            });
+          
 
             // Thêm cấu hình CORS ở đây
             builder.Services.AddCors(options =>
@@ -134,18 +119,21 @@ namespace LibraryManagement.API
                                     .AllowAnyHeader()
                                     .AllowAnyMethod());
             });
-
+            builder.Services.AddScoped<IAuthService, AuthService>(); 
 
             builder.Services.AddScoped<IBookVolumeService, BookVolumeService>();
             builder.Services.AddScoped(typeof(APIServer.Repositories.Interfaces.IRepository<>), typeof(APIServer.Repositories.Repository<>));
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<ILoanService, LoanService>();
+            builder.Services.AddScoped<IBookService, BookService>();
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+            builder.Services.AddScoped<ICoverTypeService, CoverTypeService>();
+            builder.Services.AddScoped<IPaperQualityService, PaperQualityService>();
+            builder.Services.AddScoped<IPublisherService, PublisherService>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IBookVariantService, BookVariantService>();
-            builder.Services.AddScoped<IBookService, BookService>();
-
 
             builder.Services.AddHostedService<NotificationJob>();
 
@@ -162,10 +150,15 @@ namespace LibraryManagement.API
             app.UseHttpsRedirection();
             app.UseCors("AllowFrontend");
 
+            // Thêm middleware CORS ngay trước UseAuthorization
+            app.UseCors("AllowLocalhost3000");
+
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();
+
+            app.UseCors("AllowAll");
 
             app.Run();
 

@@ -1,7 +1,10 @@
-﻿namespace APIServer.DTO.User
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace APIServer.DTO.User
 {
     public class AdminUserResponseDTO
     {
+        [Key]
         public int UserId { get; set; }
         public string Username { get; set; } = null!;
         public string FullName { get; set; } = null!;

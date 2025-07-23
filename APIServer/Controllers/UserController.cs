@@ -1,4 +1,5 @@
-﻿using APIServer.DTO.User;
+﻿using APIServer.DTO.Common;
+using APIServer.DTO.User;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -53,8 +54,27 @@ namespace APIServer.Controllers
                 return BadRequest("Không thể xác định thông tin user hiện tại");
             }
 
-            await _userService.ChangePasswordAsync(currentUserId, changePasswordRequest);
-            return NoContent();
+            try
+            {
+                await _userService.ChangePasswordAsync(currentUserId, changePasswordRequest);
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message); // 401
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message); // 400  
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message); // 404
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [Authorize(Policy = "AdminOnly")]
@@ -95,6 +115,16 @@ namespace APIServer.Controllers
         {
             await _userService.DeleteUserAsync(userId);
             return NoContent();
+        }
+
+        [Authorize(Policy = "AdminOnly")]
+        [HttpGet("admin/paged")]
+        public async Task<IActionResult> GetUsersPaged([FromQuery] PaginationRequestDTO request)
+        {
+            if (request.Page < 1 || request.PageSize < 1) return BadRequest("Page and PageSize must be >= 1");
+
+            var result = await _userService.GetUsersPagedAsync(request.Page, request.PageSize);
+            return Ok(result);
         }
     }
 }

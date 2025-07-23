@@ -11,6 +11,7 @@ namespace APIServer.DTO.Auth
         public bool IsSuccess { get; set; }
         public string? ErrorMessage { get; set; }
 
-        public LoginResponseDTO? Data { get; set; }
+        // ✅ CHANGED: Use object instead of LoginResponseDTO for flexibility
+        public object? Data { get; set; }
     }
 }

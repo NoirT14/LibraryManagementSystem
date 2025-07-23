@@ -31,6 +31,6 @@ namespace APIServer.Controllers.OData
             return Ok(book);
         }
     }
-    
+
 
 }

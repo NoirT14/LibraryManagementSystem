@@ -1,4 +1,5 @@
 ﻿using APIServer.DTO.Loan;
+using APIServer.Models;
 
 namespace APIServer.Service.Interfaces
 {
@@ -15,6 +16,8 @@ namespace APIServer.Service.Interfaces
         Task<decimal?> GetTotalFineAmountAsync();
 
         Task<List<MonthlyStatDto>> GetLoansPerMonthAsync();
+
+        Task<List<LoanWithVolumeDto>> GetLoansWithVolumeByUserIdAsync(int userId);
 
     }
 }

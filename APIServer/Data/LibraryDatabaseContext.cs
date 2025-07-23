@@ -46,8 +46,6 @@ public partial class LibraryDatabaseContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Author>(entity =>
@@ -81,6 +79,9 @@ public partial class LibraryDatabaseContext : DbContext
             entity.Property(e => e.Title)
                 .HasMaxLength(255)
                 .HasColumnName("title");
+            entity.Property(e => e.CoverImg)
+                .HasMaxLength(200)
+                .HasColumnName("cover_img");
 
             entity.HasOne(d => d.Category).WithMany(p => p.Books)
                 .HasForeignKey(d => d.CategoryId)

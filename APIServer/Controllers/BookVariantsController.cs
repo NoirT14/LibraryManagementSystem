@@ -1,4 +1,5 @@
-﻿using APIServer.Service.Interfaces;
+﻿using APIServer.DTO.Book;
+using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace APIServer.Controllers
@@ -14,16 +15,18 @@ namespace APIServer.Controllers
             _variantService = variantService;
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+       
+
+        [HttpGet("{variantId}")]
+        public async Task<ActionResult<BookVariantDto>> GetBookVariantWithBook(int variantId)
         {
-            var result = await _variantService.GetVariantByIdAsync(id);
+            var dto = await _variantService.GetBookVariantWithBookAsync(variantId);
+            if (dto == null)
+                return NotFound($"No BookVariant found with VariantId = {variantId}");
 
-            if (result == null)
-                return NotFound();
-
-            return Ok(result);
+            return Ok(dto);
         }
+
     }
 
 }

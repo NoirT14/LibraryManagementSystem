@@ -1,4 +1,5 @@
 ﻿using APIServer.DTO.Notification;
+using APIServer.Service;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -37,32 +38,28 @@ namespace APIServer.Controllers
             return Ok(query); // Trả về IQueryable để OData hoạt động
         }
 
-        // GET: api/notifications/track?notificationId=1
-        [HttpGet("track")]
-        public async Task<IActionResult> Track(int notificationId)
-        {
-            var result = await _notificationService.TrackNotificationAsync(notificationId);
+     
 
-            if (!result)
-                return NotFound("Notification not found.");
+            // PATCH: api/notifications/{id}/mark-read
+            [HttpPatch("{id}/mark-read")]
+            public async Task<IActionResult> MarkAsRead(int id)
+            {
+                var result = await _notificationService.MarkAsReadAsync(id);
 
-            // Trả về ảnh pixel 1x1
-            var pixel = Convert.FromBase64String(
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAoMBgF9+FiQAAAAASUVORK5CYII=");
+                if (!result)
+                    return NotFound("Notification not found");
 
-            return File(pixel, "image/png");
-        }
+                return NoContent();
+            }
 
-        // PATCH: api/notifications/{id}/mark-read
-        [HttpPatch("{id}/mark-read")]
-        public async Task<IActionResult> MarkAsRead(int id)
-        {
-            var result = await _notificationService.MarkAsReadAsync(id);
-
-            if (!result)
-                return NotFound("Notification not found");
-
-            return NoContent();
-        }
+                [HttpGet("unread-count/{receiverId}")]
+                public async Task<IActionResult> GetUnreadCount(int receiverId)
+                {
+                    var count = await _notificationService.CountUnreadNotificationsAsync(receiverId);
+                    return Ok(count);
+                }
     }
+
+            
+
 }

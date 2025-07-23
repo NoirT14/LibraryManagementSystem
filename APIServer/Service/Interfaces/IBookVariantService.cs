@@ -4,6 +4,7 @@ namespace APIServer.Service.Interfaces
 {
     public interface IBookVariantService
     {
-        Task<BookVariantReservationDTO?> GetVariantByIdAsync(int variantId);
+
+        Task<BookVariantDto?> GetBookVariantWithBookAsync(int variantId);
     }
 }
