@@ -69,7 +69,7 @@ namespace LibraryManagement.API
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
+            app.UseHttpsRedirection();
 
             // Thêm middleware CORS ngay trước UseAuthorization
             app.UseCors("AllowLocalhost3000");
@@ -85,7 +85,6 @@ namespace LibraryManagement.API
         {
             var builder = new ODataConventionModelBuilder();
             builder.EntitySet<BookVolumeDTO>("BookVolumes");
-            builder.EntitySet<HomepageBookDTO>("Books");
             builder.EntitySet<Notification>("notifications");
 
             return builder.GetEdmModel();

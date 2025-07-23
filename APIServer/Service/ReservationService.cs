@@ -186,5 +186,18 @@ namespace APIServer.Service
             await _context.SaveChangesAsync();
             Console.WriteLine($"Expired {expired.Count} reservations and sent notifications.");
         }
+
+        //the
+
+        public async Task<int> CountReservationsAsync()
+        {
+            return await _context.Reservations.CountAsync();
+        }
+
+        public async Task<int> CountByStatusAsync(string status)
+        {
+            return await _context.Reservations.CountAsync(r => r.ReservationStatus == status);
+        }
     }
 }
+

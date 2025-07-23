@@ -1,4 +1,5 @@
 ﻿using APIServer.Data;
+using APIServer.DTO.Loan;
 using APIServer.Models;
 using APIServer.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -205,5 +206,38 @@ Thank you.";
 
             await _context.SaveChangesAsync();
         }
+
+        //the
+        public async Task<int> CountTotalLoansAsync()
+        {
+            return await _context.Loans.CountAsync();
+        }
+
+        public async Task<int> CountOverdueLoansAsync()
+        {
+            return await _context.Loans.CountAsync(l => l.LoanStatus == "Overdue");
+        }
+
+        public async Task<decimal?> GetTotalFineAmountAsync()
+        {
+            return await _context.Loans.SumAsync(l => l.FineAmount);
+        }
+
+        public async Task<List<MonthlyStatDto>> GetLoansPerMonthAsync()
+        {
+            var result = _context.Loans
+                .AsEnumerable() // chuyển sang xử lý in-memory
+                .GroupBy(l => l.BorrowDate.ToString("yyyy-MM"))
+                .Select(g => new MonthlyStatDto
+                {
+                    Month = g.Key,
+                    Count = g.Count()
+                })
+                .ToList();
+
+            return await Task.FromResult(result); // vẫn giữ async để đồng bộ interface
+        }
+
+
     }
 }

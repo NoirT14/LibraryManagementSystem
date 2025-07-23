@@ -17,13 +17,7 @@ namespace APIServer.Controllers.OData
             _bookService = bookService;
         }
 
-        [EnableQuery]
-        [HttpGet]
-        public async Task<ActionResult<IQueryable<HomepageBookDTO>>> Get()
-        {
-            var books = await _bookService.GetHomepageBooksAsync();
-            return Ok(books.AsQueryable());
-        }
+        
 
         [HttpGet("{id}")]
         public async Task<ActionResult<BookDetailDTO>> GetBookDetail(int id)

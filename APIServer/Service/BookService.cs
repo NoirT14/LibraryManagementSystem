@@ -16,37 +16,7 @@ namespace APIServer.Services
             _context = context;
         }
 
-        public async Task<List<HomepageBookDTO>> GetHomepageBooksAsync()
-        {
-            var books = await _context.Books
-                .Include(b => b.Category)
-                .Include(b => b.Authors)
-                .Include(b => b.BookVolumes)
-                    .ThenInclude(v => v.BookVariants)
-                        .ThenInclude(v => v.BookCopies)
-                .ToListAsync();
-
-            var result = books.Select(b => new HomepageBookDTO
-            {
-                BookId = b.BookId,
-                Title = b.Title,
-                Description = b.Description,
-                Language = b.Language,
-                Status = b.BookStatus,
-                CategoryName = b.Category?.CategoryName, // ✅ Dùng null-safe
-                Authors = b.Authors?.Select(a => a.AuthorName).ToList() ?? new List<string>(), // ✅ Chống null
-                TotalCopies = b.BookVolumes
-                    .SelectMany(v => v.BookVariants)
-                    .SelectMany(v => v.BookCopies)
-                    .Count(),
-                AvailableCopies = b.BookVolumes
-                    .SelectMany(v => v.BookVariants)
-                    .SelectMany(v => v.BookCopies)
-                    .Count(c => c.CopyStatus == "Available")
-            }).ToList();
-
-            return result;
-        }
+        
 
         public async Task<BookDetailDTO?> GetBookDetailByIdAsync(int id)
         {
@@ -95,5 +65,28 @@ namespace APIServer.Services
             };
         }
 
+
+
+        //The
+        public async Task<int> CountTotalCopiesAsync()
+        {
+            return await _context.BookCopies.CountAsync();
+        }
+
+        public async Task<Dictionary<string, int>> GetCopyStatusStatsAsync()
+        {
+            return await _context.BookCopies
+                .GroupBy(c => c.CopyStatus)
+                .Select(g => new { Status = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.Status, g => g.Count);
+        }
+        public async Task<Dictionary<string, int>> GetBookCountByCategoryAsync()
+        {
+            return await _context.Books
+                .Include(b => b.Category)
+                .GroupBy(b => b.Category.CategoryName)
+                .Select(g => new { Category = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.Category, g => g.Count);
+        }
     }
 }
