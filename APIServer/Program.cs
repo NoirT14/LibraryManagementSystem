@@ -20,9 +20,6 @@ namespace LibraryManagement.API
         {
             var builder = WebApplication.CreateBuilder(args);
             var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
-            // Add services to the container.
-            builder.Services.AddScoped<IReservationService, ReservationService>(); // binhtt
-            builder.Services.AddScoped<ILoanService, LoanService>(); //binhtt
 
             builder.Services.AddControllers().AddOData(opt => opt
                 .Select()
@@ -87,8 +84,6 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IBookService, BookService>();
-            builder.Services.AddScoped<IReservationService, ReservationService>();
-            builder.Services.AddScoped<ILoanService, LoanService>();
             builder.Services.AddHostedService<SessionCleanupService>();
 
             builder.Services.AddEndpointsApiExplorer();
