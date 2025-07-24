@@ -35,6 +35,16 @@ namespace LibraryManagement.API
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+
+            builder.Services.AddControllers().AddOData(opt => opt
+                .Select()
+                .Filter()
+                .OrderBy()
+                .Expand()
+                .Count()
+                .SetMaxTop(100)
+            ); //binhtt
 
             builder.Services.AddControllers()
                 .AddJsonOptions(opt =>
@@ -139,13 +149,15 @@ namespace LibraryManagement.API
 
             var app = builder.Build();
 
+            app.UseCors("AllowAll");
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-            app.UseHttpsRedirection();
+            
 
             app.UseHttpsRedirection();
             app.UseCors("AllowFrontend");

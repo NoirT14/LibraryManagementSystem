@@ -17,9 +17,24 @@ namespace APIServer.Controllers.OData
             _bookService = bookService;
         }
 
-        
+        [HttpGet("books")]
+        public async Task<IActionResult> GetBooksForHomepage()
+        {
+            var books = await _bookService.GetBooksForHomepageAsync();
+            return Ok(books);
+        }
 
-       
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetBookDetail(int id)
+        {
+            var result = await _bookService.GetBookDetailAsync(id);
+            if (result == null)
+                return NotFound();
+
+            return Ok(result);
+        }
+
+
     }
 
 
