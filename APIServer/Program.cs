@@ -6,7 +6,13 @@ using APIServer.Repositories;
 using APIServer.Repositories.Interfaces;
 using APIServer.Service;
 using APIServer.Service.Interfaces;
+using Microsoft.AspNetCore.OData;
+using APIServer.Repositories;
+using APIServer.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.OData;
+using APIServer.Service;
+using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -80,19 +86,18 @@ namespace LibraryManagement.API
 
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddScoped(typeof(IUserRepository), typeof(UserRepository));
-
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
-            builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IBookService, BookService>();
+<<<<<<< HEAD
             builder.Services.AddHostedService<SessionCleanupService>();
+=======
+            builder.Services.AddScoped<IReservationService, ReservationService>();
+            builder.Services.AddScoped<ILoanService, LoanService>();
+>>>>>>> binhtt
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
-
-            app.UseCors("AllowAll");
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
