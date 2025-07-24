@@ -57,7 +57,6 @@ namespace APIServer.Controllers
 
                 _logger.LogInformation("Registration attempt for {Username}/{Email} from {IpAddress}",
                     request.Username, request.Email, ipAddress);
-
                 if (await _authService.IsUsernameTaken(request.Username))
                 {
                     return BadRequest(new
@@ -76,7 +75,6 @@ namespace APIServer.Controllers
                         errorMessage = "Email đã được sử dụng"
                     });
                 }
-
                 var result = await _authService.Register(request, ipAddress, userAgent);
                 if (!result.IsSuccess) return BadRequest(result);
                 return Ok(result);
@@ -88,127 +86,24 @@ namespace APIServer.Controllers
             }
         }
 
-        // ✅ UPDATED: Now sends OTP instead of reset link
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDTO request)
+        {
+            var result = await _authService.ResetPassword(request);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new { message = result.ErrorMessage });
+            }
+
+            return Ok(new { message = "Password reset successfully!" });
+        }
+
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDTO request)
         {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
+            var result = await _authService.SendResetPasswordTokenAsync(request);
 
-                var ipAddress = GetClientIpAddress();
-                _logger.LogInformation("Forgot password request for {UsernameOrEmail} from {IpAddress}",
-                    request.UsernameorEmail, ipAddress);
-
-                var result = await _authService.SendResetPasswordOtpAsync(request);
-
-                // Always return success to prevent email enumeration attacks
-                return Ok(new
-                {
-                    message = "Nếu email tồn tại trong hệ thống, mã OTP đã được gửi để đặt lại mật khẩu.",
-                    isSuccess = true
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during forgot password for {UsernameOrEmail}", request.UsernameorEmail);
-                return StatusCode(500, new { message = "Đã xảy ra lỗi khi xử lý yêu cầu." });
-            }
-        }
-
-        // ✅ NEW: Verify OTP endpoint
-        [HttpPost("verify-otp")]
-        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDTO request)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
-                var ipAddress = GetClientIpAddress();
-                _logger.LogInformation("OTP verification attempt for {Email} from {IpAddress}",
-                    request.Email, ipAddress);
-
-                var result = await _authService.VerifyOtpAsync(request);
-
-                if (result.IsSuccess)
-                {
-                    return Ok(new
-                    {
-                        message = "Mã OTP hợp lệ. Bạn có thể đặt lại mật khẩu.",
-                        isSuccess = true,
-                        data = result.Data
-                    });
-                }
-
-                return BadRequest(new
-                {
-                    message = result.ErrorMessage,
-                    isSuccess = false
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during OTP verification for {Email}", request.Email);
-                return StatusCode(500, new { message = "Đã xảy ra lỗi khi xác minh OTP." });
-            }
-        }
-
-        // ✅ NEW: Reset password with OTP
-        [HttpPost("reset-password-with-otp")]
-        public async Task<IActionResult> ResetPasswordWithOtp([FromBody] ResetPasswordWithOtpRequestDTO request)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
-
-                var ipAddress = GetClientIpAddress();
-                _logger.LogInformation("Password reset with OTP attempt for {Email} from {IpAddress}",
-                    request.Email, ipAddress);
-
-                var result = await _authService.ResetPasswordWithOtpAsync(request);
-
-                if (result.IsSuccess)
-                {
-                    return Ok(new
-                    {
-                        message = "Mật khẩu đã được đặt lại thành công!",
-                        isSuccess = true
-                    });
-                }
-
-                return BadRequest(new
-                {
-                    message = result.ErrorMessage,
-                    isSuccess = false
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during password reset with OTP for {Email}", request.Email);
-                return StatusCode(500, new { message = "Đã xảy ra lỗi khi đặt lại mật khẩu." });
-            }
-        }
-
-        // ✅ LEGACY: Keep old reset password for backward compatibility (deprecated)
-        [HttpPost("reset-password")]
-        [Obsolete("This endpoint is deprecated. Use reset-password-with-otp instead.")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDTO request)
-        {
-            return BadRequest(new
-            {
-                message = "Phương thức này không còn được hỗ trợ. Vui lòng sử dụng đặt lại mật khẩu bằng OTP.",
-                isSuccess = false,
-                deprecated = true
-            });
+            return Ok(new { message = "If the email exists, a reset password link has been sent." });
         }
 
         [HttpGet("analytics")]
@@ -225,6 +120,37 @@ namespace APIServer.Controllers
                 _logger.LogError(ex, "Error retrieving analytics data");
                 return StatusCode(500, new { message = "An error occurred while retrieving analytics." });
             }
+        }
+
+        // ✅ Helper method to extract client IP
+        private string GetClientIpAddress()
+        {
+            string ipAddress = string.Empty;
+
+            if (Request.Headers.ContainsKey("X-Forwarded-For"))
+            {
+                ipAddress = Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim() ?? string.Empty;
+            }
+            else if (Request.Headers.ContainsKey("X-Real-IP"))
+            {
+                ipAddress = Request.Headers["X-Real-IP"].FirstOrDefault() ?? string.Empty;
+            }
+            else if (Request.Headers.ContainsKey("CF-Connecting-IP"))
+            {
+                ipAddress = Request.Headers["CF-Connecting-IP"].FirstOrDefault() ?? string.Empty;
+            }
+
+            if (string.IsNullOrEmpty(ipAddress))
+            {
+                ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+            }
+
+            if (ipAddress == "::1")
+            {
+                ipAddress = "127.0.0.1";
+            }
+
+            return ipAddress;
         }
 
         [HttpPost("logout")]
@@ -271,37 +197,6 @@ namespace APIServer.Controllers
                     isSuccess = false
                 });
             }
-        }
-
-        // ✅ Helper method to extract client IP
-        private string GetClientIpAddress()
-        {
-            string ipAddress = string.Empty;
-
-            if (Request.Headers.ContainsKey("X-Forwarded-For"))
-            {
-                ipAddress = Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',')[0].Trim() ?? string.Empty;
-            }
-            else if (Request.Headers.ContainsKey("X-Real-IP"))
-            {
-                ipAddress = Request.Headers["X-Real-IP"].FirstOrDefault() ?? string.Empty;
-            }
-            else if (Request.Headers.ContainsKey("CF-Connecting-IP"))
-            {
-                ipAddress = Request.Headers["CF-Connecting-IP"].FirstOrDefault() ?? string.Empty;
-            }
-
-            if (string.IsNullOrEmpty(ipAddress))
-            {
-                ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            }
-
-            if (ipAddress == "::1")
-            {
-                ipAddress = "127.0.0.1";
-            }
-
-            return ipAddress;
         }
     }
 }

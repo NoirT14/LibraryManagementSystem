@@ -3,7 +3,7 @@ using APIServer.DTO.Book;
 using APIServer.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace APIServer.Services
+namespace APIServer.Service
 {
     public class BookVolumeService : IBookVolumeService
     {

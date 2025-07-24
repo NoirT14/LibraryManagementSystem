@@ -1,4 +1,5 @@
-﻿using APIServer.DTO.Loans;
+﻿using APIServer.DTO.Loan;
+using APIServer.DTO.Loans;
 using APIServer.Models;
 
 namespace APIServer.Service.Interfaces

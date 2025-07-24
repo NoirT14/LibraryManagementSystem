@@ -3,7 +3,7 @@ using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
 using Microsoft.AspNetCore.OData.Query;
-using APIServer.Services;
+using APIServer.Service;
 
 namespace APIServer.Controllers.OData
 {
