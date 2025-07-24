@@ -28,6 +28,7 @@ namespace LibraryManagement.API
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+            //add CORS
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
@@ -37,6 +38,7 @@ namespace LibraryManagement.API
                 );
             });
 
+            //add jwt
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -71,9 +73,25 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<ILoanService, LoanService>();
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddScoped<IUserRepository, UserRepository>();
-
+            builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddHostedService<SessionCleanupService>();
+            builder.Services.AddScoped<IAuthService, AuthService>();
 
+            builder.Services.AddScoped<IBookVolumeService, BookVolumeService>();
+            builder.Services.AddScoped(typeof(APIServer.Repositories.Interfaces.IRepository<>), typeof(APIServer.Repositories.Repository<>));
+            builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<ILoanService, LoanService>();
+            builder.Services.AddScoped<IBookService, BookService>();
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+            builder.Services.AddScoped<ICoverTypeService, CoverTypeService>();
+            builder.Services.AddScoped<IPaperQualityService, PaperQualityService>();
+            builder.Services.AddScoped<IPublisherService, PublisherService>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddScoped<IReservationService, ReservationService>();
+            builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IBookVariantService, BookVariantService>();
+
+            builder.Services.AddHostedService<NotificationJob>();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
@@ -95,6 +113,8 @@ namespace LibraryManagement.API
             app.MapControllers();
             app.Run();
 
+            app.Run();
         }
+
     }
 }

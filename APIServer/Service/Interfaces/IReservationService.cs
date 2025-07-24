@@ -32,5 +32,11 @@ namespace APIServer.Service.Interfaces
     int page = 1, int pageSize = 10, string? keyword = null, string? status = null);
         Task NotifyNextReservationAsync(int variantId);
         Task<bool> HasPendingReservationsAsync(int variantId);
+
+        Task CheckAvailableReservationsAsync(); // Gửi noti khi sách có sẵn
+        Task ExpireOldReservationsAsync();      // Gửi noti khi hết hạn giữ
+        //The
+        Task<int> CountReservationsAsync();
+        Task<int> CountByStatusAsync(string status);
     }
 }

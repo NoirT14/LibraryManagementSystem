@@ -19,5 +19,18 @@ namespace APIServer.Service.Interfaces
         Task<bool> CanUserBorrowDirectlyAsync(int userId, int variantId);
         Task<List<BookCopyDTO>> GetAvailableCopiesAsync(int variantId);
         Task UpdateCopyStatusAsync(int copyId, string status);
+       
+        Task SendDueDateRemindersAsync();
+        Task SendFineNotificationsAsync();
+        Task UpdateOverdueLoansAndFinesAsync();
+
+        //the
+        Task<int> CountTotalLoansAsync();
+        Task<int> CountOverdueLoansAsync();
+        Task<decimal?> GetTotalFineAmountAsync();
+
+        Task<List<MonthlyStatDto>> GetLoansPerMonthAsync();
+
+
     }
 }
