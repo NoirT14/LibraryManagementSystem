@@ -7,15 +7,8 @@ using APIServer.Repositories.Interfaces;
 using APIServer.Service;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.OData;
-using APIServer.Repositories;
-using APIServer.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.OData;
-using APIServer.Service;
-using APIServer.Service.Interfaces;
-using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -28,25 +21,13 @@ namespace LibraryManagement.API
             var builder = WebApplication.CreateBuilder(args);
             var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 
-            builder.Services.AddControllers().AddOData(opt => opt
-                .Select()
-                .Filter()
-                .OrderBy()
-                .Expand()
-                .Count()
-                .SetMaxTop(100)
-            ); //binhtt
+            builder.Services.AddControllers().AddOData(opt =>
+                opt.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100)
+                    .AddRouteComponents("odata", ODataConfig.GetEdmModel()));
 
-            builder.Services.AddControllers()
-                .AddOData(opt =>
-                {
-                    opt.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100)
-                        .AddRouteComponents("odata", ODataConfig.GetEdmModel());
-                });
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            //add CORS
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
@@ -56,7 +37,6 @@ namespace LibraryManagement.API
                 );
             });
 
-            //add jwt
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -76,7 +56,6 @@ namespace LibraryManagement.API
                 };
             });
 
-            //add authorization role
             builder.Services.AddAuthorization(options =>
             {
                 options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
@@ -84,22 +63,22 @@ namespace LibraryManagement.API
                 options.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
             });
 
-            builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-            builder.Services.AddScoped(typeof(IUserRepository), typeof(UserRepository));
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IEmailService, EmailService>(); // thêm lại
+            builder.Services.AddScoped<IUserService, UserService>();   // thêm lại
             builder.Services.AddScoped<IBookService, BookService>();
-<<<<<<< HEAD
-            builder.Services.AddHostedService<SessionCleanupService>();
-=======
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<ILoanService, LoanService>();
->>>>>>> binhtt
+            builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+            builder.Services.AddHostedService<SessionCleanupService>();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -107,15 +86,15 @@ namespace LibraryManagement.API
             }
 
             app.UseHttpsRedirection();
-            app.UseCors("AllowFrontend");
+            app.UseCors("AllowFrontend"); // giữ lại AllowFrontend thay vì AllowAll
 
             app.UseAuthentication();
             app.UseMiddleware<BrowserFingerprintMiddleware>();
             app.UseAuthorization();
 
             app.MapControllers();
-
             app.Run();
+
         }
     }
 }
