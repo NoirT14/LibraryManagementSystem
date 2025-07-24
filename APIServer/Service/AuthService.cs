@@ -390,5 +390,73 @@ namespace APIServer.Service
             var user = await _userRepository.GetByUsernameAsync(username);
             return user != null;
         }
+
+        public async Task<bool> ValidateSessionFingerprintAsync(string sessionId, BrowserInfoDTO currentBrowserInfo)
+        {
+            await Task.CompletedTask;
+
+            lock (_lock)
+            {
+                if (!_activeSessions.TryGetValue(sessionId, out var session))
+                {
+                    _logger.LogWarning("Session {SessionId} not found for fingerprint validation", sessionId);
+                    return false;
+                }
+
+                if (session.BrowserInfo == null || currentBrowserInfo == null)
+                {
+                    _logger.LogInformation("Skipping fingerprint validation - missing browser info for session {SessionId}", sessionId);
+                    return true; // Skip validation if no browser info
+                }
+
+                // Define critical fields that shouldn't change
+                var criticalFieldsMatch = CompareCriticalFingerprint(session.BrowserInfo, currentBrowserInfo);
+
+                if (!criticalFieldsMatch)
+                {
+                    _logger.LogWarning("Session {SessionId} critical fingerprint mismatch. User: {UserId}, Original: {OriginalInfo}, Current: {CurrentInfo}",
+                        sessionId, session.UserId,
+                        SerializeBrowserInfo(session.BrowserInfo),
+                        SerializeBrowserInfo(currentBrowserInfo));
+
+                    // Invalidate session
+                    _activeSessions.Remove(sessionId);
+                    return false;
+                }
+
+                // Update last activity time
+                session.LastActivity = DateTime.UtcNow;
+
+                _logger.LogDebug("Session {SessionId} fingerprint validation passed", sessionId);
+                return true;
+            }
+        }
+
+        private bool CompareCriticalFingerprint(BrowserInfoDTO stored, BrowserInfoDTO current)
+        {
+            // Critical fields that rarely change - strict validation
+            var criticalMatch =
+                stored.ScreenResolution == current.ScreenResolution &&
+                stored.Timezone == current.Timezone &&
+                stored.Language == current.Language &&
+                stored.OperatingSystem == current.OperatingSystem;
+
+            // Optional: Also check browser but allow version updates
+            var browserMatch = stored.BrowserName == current.BrowserName;
+
+            return criticalMatch && browserMatch;
+        }
+
+        private string SerializeBrowserInfo(BrowserInfoDTO browserInfo)
+        {
+            try
+            {
+                return JsonSerializer.Serialize(browserInfo);
+            }
+            catch
+            {
+                return "SerializationError";
+            }
+        }
     }
 }
