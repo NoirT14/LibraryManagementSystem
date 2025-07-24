@@ -344,6 +344,7 @@ namespace APIServer.Service
                     FullName = r.User.FullName,
                     Email = r.User.Email,
 
+                    VariantId = r.Variant.VariantId,
                     Title = r.Variant.Volume.Book.Title,
                     VolumeTitle = r.Variant.Volume.VolumeTitle ?? "",
                     Authors = r.Variant.Volume.Book.Authors.Select(ba => ba.AuthorName).ToList(),

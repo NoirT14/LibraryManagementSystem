@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.OData;
 using APIServer.Service;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.OData;
->>>>>>>>> Temporary merge branch 2
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
@@ -92,12 +91,7 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<IBookService, BookService>();
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<ILoanService, LoanService>();
-            builder.Services.AddHostedService<SessionCleanupService>();
 
-                });
-            });
-
->>>>>>>>> Temporary merge branch 2
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 

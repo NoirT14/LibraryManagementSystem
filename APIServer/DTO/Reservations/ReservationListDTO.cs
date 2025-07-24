@@ -14,6 +14,7 @@
         public string Email { get; set; } = null!;
 
         // Book info
+        public int VariantId { get; set; }
         public string Title { get; set; } = null!;
         public string? VolumeTitle { get; set; }
         public List<string> Authors { get; set; } = new List<string>();
