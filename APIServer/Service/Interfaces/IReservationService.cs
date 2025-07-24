@@ -4,7 +4,7 @@ using APIServer.DTO.Reservations;
 namespace APIServer.Service.Interfaces
 {
     public interface IReservationService
-    {
+    {//
         Task<Reservation?> CreateReservationAsync(ReservationCreateDTO dto);
         Task<bool> CancelReservationAsync(int reservationId, int userId);
         Task<bool> CancelReservationByStaffAsync(int reservationId, int staffId);

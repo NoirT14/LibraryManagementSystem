@@ -7,7 +7,7 @@
         public string? VolumeTitle { get; set; }
         public List<string> Authors { get; set; } = new List<string>();
         public string PublisherName { get; set; } = null!;
-        public string ISBN { get; set; } = null!;
+        public string ISBN { get; set; } = null!;//
         public int TotalCopies { get; set; }
         public int AvailableCopies { get; set; }
         public int PendingReservations { get; set; }

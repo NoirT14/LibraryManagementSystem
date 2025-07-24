@@ -11,7 +11,7 @@ namespace APIServer.DTO.Loans
         [Range(0, double.MaxValue, ErrorMessage = "FineAmount cannot be negative")]
         public decimal FineAmount { get; set; }
 
-        public bool Extended { get; set; }
+        public bool Extended { get; set; }//
     }
 
 }

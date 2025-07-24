@@ -15,6 +15,6 @@ namespace APIServer.DTO.Loans
         [Required(ErrorMessage = "DueDate is required")]
         public DateTime DueDate { get; set; }
 
-        public int? ReservationId { get; set; }
+        public int? ReservationId { get; set; }//
     }
 }

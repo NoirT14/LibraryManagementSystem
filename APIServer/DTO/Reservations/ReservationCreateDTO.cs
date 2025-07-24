@@ -12,6 +12,6 @@ namespace APIServer.DTO.Reservations
         [Range(1, int.MaxValue, ErrorMessage = "VariantId must be greater than 0")]
         public int VariantId { get; set; }
 
-        public DateTime? ExpirationDate { get; set; }
+        public DateTime? ExpirationDate { get; set; }//
     }
 }

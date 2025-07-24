@@ -9,7 +9,7 @@
         public string LoanStatus { get; set; }
         public decimal FineAmount { get; set; }
         public bool Extended { get; set; }
-
+        //
         public string Username { get; set; }
         public string FullName { get; set; }
         public string Email { get; set; }

@@ -4,7 +4,7 @@ using APIServer.Models;
 namespace APIServer.Service.Interfaces
 {
     public interface ILoanService
-    {
+    {//
         Task<LoanListDTO> CreateLoanAsync(LoanCreateDTO dto);
         Task<bool> ReturnLoanAsync(int loanId);
         Task<IEnumerable<Loan>> GetUserLoansAsync(int userId);

@@ -8,7 +8,7 @@
         public string Location { get; set; }
 
         public int VariantId { get; set; }
-        public int VolumeId { get; set; }
+        public int VolumeId { get; set; }//
         public int BookId { get; set; }
 
         public string Title { get; set; }

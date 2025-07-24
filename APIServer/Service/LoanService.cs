@@ -11,7 +11,7 @@ namespace APIServer.Service
         private readonly LibraryDatabaseContext _context;
         private readonly IReservationService _reservationService;
 
-        // FIX 1: Add lock for thread safety
+        // FIX 1: Add lock for thread safety.
         private static readonly object _penaltyLock = new object();
         private static DateTime LastPenaltyUpdateDate = DateTime.MinValue;
 

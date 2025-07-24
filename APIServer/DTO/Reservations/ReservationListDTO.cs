@@ -11,7 +11,7 @@
         // User info
         public string Username { get; set; } = null!;
         public string FullName { get; set; } = null!;
-        public string Email { get; set; } = null!;
+        public string Email { get; set; } = null!;//
 
         // Book info
         public int VariantId { get; set; }

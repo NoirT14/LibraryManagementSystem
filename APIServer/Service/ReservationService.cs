@@ -10,7 +10,7 @@ namespace APIServer.Service
     {
         private readonly LibraryDatabaseContext _context;
 
-        // FIX 1: Add lock for thread safety
+        // FIX 1: Add lock for thread safety,
         private static readonly object _expirationLock = new object();
         private static DateTime LastExpiredReservationCheck = DateTime.MinValue;
 

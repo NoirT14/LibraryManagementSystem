@@ -23,7 +23,7 @@ namespace APIServer.Controllers
         {
             try
             {
-                // Basic validation
+                // Basic validation.
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 

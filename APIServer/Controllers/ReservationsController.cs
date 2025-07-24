@@ -16,7 +16,7 @@ namespace APIServer.Controllers
             _reservationService = reservationService;
         }
 
-        // USER ENDPOINTS
+        // USER ENDPOINTS.
 
         [HttpPost]
         [Authorize]
