@@ -1,6 +1,7 @@
 ﻿
 using APIServer.Configs;
 using APIServer.Data;
+using APIServer.Middleware;
 using APIServer.Repositories;
 using APIServer.Repositories.Interfaces;
 using APIServer.Service;
@@ -104,6 +105,7 @@ namespace LibraryManagement.API
             app.UseCors("AllowFrontend");
 
             app.UseAuthentication();
+            app.UseMiddleware<BrowserFingerprintMiddleware>();
             app.UseAuthorization();
 
             app.MapControllers();

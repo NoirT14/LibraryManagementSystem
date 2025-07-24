@@ -13,5 +13,6 @@ namespace APIServer.Service.Interfaces
         Task<Dictionary<string, object>> GetAnalyticsAsync();
         Task<bool> InvalidateSessionAsync(string sessionId);
         Task CleanupExpiredSessionsAsync();
+        Task<bool> ValidateSessionFingerprintAsync(string sessionId, BrowserInfoDTO currentBrowserInfo);
     }
 }
