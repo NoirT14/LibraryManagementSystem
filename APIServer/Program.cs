@@ -51,6 +51,9 @@ namespace LibraryManagement.API
                 builderOdata.EntitySet<PaperQualityResponse>("PaperQuality");
                 builderOdata.EntitySet<BookVolume>("BookVolumes");
                 builderOdata.EntitySet<Notification>("notifications");
+                builderOdata.EntitySet<BookVolumeDTO>("BookVolumes");
+                builderOdata.EntitySet<HomepageBookDTO>("Books");
+                builderOdata.EntitySet<Notification>("notifications");
                 opt.AddRouteComponents("odata", builderOdata.GetEdmModel());
                 opt.Select().Expand().Filter().OrderBy().Count().SetMaxTop(100);
             });
@@ -157,15 +160,6 @@ namespace LibraryManagement.API
 
             app.Run();
 
-        }
-        static IEdmModel GetEdmModel()
-        {
-            var builder = new ODataConventionModelBuilder();
-            builder.EntitySet<BookVolumeDTO>("BookVolumes");
-            builder.EntitySet<HomepageBookDTO>("Books");
-            builder.EntitySet<Notification>("notifications");
-
-            return builder.GetEdmModel();
         }
     }
 
