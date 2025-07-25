@@ -1,7 +1,9 @@
 ﻿using APIServer.Data;
+using APIServer.DTO.Edition;
 using APIServer.DTO.PaperQuality;
 using APIServer.Models;
 using APIServer.Service.Interfaces;
+using APIServer.util;
 using Microsoft.EntityFrameworkCore;
 using System;
 
@@ -16,15 +18,17 @@ namespace APIServer.Service
             _context = context;
         }
 
-        public async Task<IEnumerable<PaperQualityResponse>> GetAllAsync()
+        public IQueryable<PaperQualityResponse> GetAllAsQueryable()
         {
-            return await _context.PaperQualities
+            return _context.PaperQualities
                 .Select(p => new PaperQualityResponse
                 {
                     PaperQualityId = p.PaperQualityId,
-                    PaperQualityName = p.PaperQualityName
-                })
-                .ToListAsync();
+                    PaperQualityName = p.PaperQualityName,
+                    BookCount = p.BookVariants
+                        .SelectMany(bv => bv.BookCopies)
+                        .Count()
+                });
         }
 
         public async Task<PaperQualityResponse?> GetByIdAsync(int id)
@@ -41,6 +45,13 @@ namespace APIServer.Service
 
         public async Task<PaperQualityResponse> CreateAsync(PaperQualityRequest dto)
         {
+            if (string.IsNullOrEmpty(dto.PaperQualityName))
+            {
+                throw new InvalidOperationException("Paper name is empty.");
+            }
+
+            if (StringHelper.ExistsInList(dto.PaperQualityName, _context.PaperQualities.Select(c => c.PaperQualityName).ToList())) throw new InvalidOperationException("Paper Quality already exists.");
+
             var entity = new PaperQuality
             {
                 PaperQualityName = dto.PaperQualityName
@@ -58,8 +69,14 @@ namespace APIServer.Service
 
         public async Task<bool> UpdateAsync(int id, PaperQualityRequest dto)
         {
+            if (string.IsNullOrEmpty(dto.PaperQualityName))
+            {
+                throw new InvalidOperationException("Paper name is empty.");
+            }
+
             var entity = await _context.PaperQualities.FindAsync(id);
             if (entity == null) return false;
+            if (StringHelper.ExistsInList(dto.PaperQualityName, _context.PaperQualities.Select(c => c.PaperQualityName).ToList())) return false;
 
             entity.PaperQualityName = dto.PaperQualityName;
 
@@ -73,7 +90,9 @@ namespace APIServer.Service
             var entity = await _context.PaperQualities.FindAsync(id);
             if (entity == null) return false;
 
-            _context.PaperQualities.Remove(entity);
+            entity.IsDeleted = true;
+            _context.PaperQualities.Update(entity);
+
             await _context.SaveChangesAsync();
             return true;
         }

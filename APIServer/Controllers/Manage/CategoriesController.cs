@@ -1,6 +1,8 @@
-﻿using APIServer.DTO.Category;
+﻿using APIServer.DTO.Author;
+using APIServer.DTO.Category;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace APIServer.Controllers.Manage
 {
@@ -15,8 +17,11 @@ namespace APIServer.Controllers.Manage
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CategoryResponse>>> GetAll() =>
-            Ok(await _service.GetAllAsync());
+        [EnableQuery]
+        public IQueryable<CategoryResponse> GetAll()
+        {
+            return _service.GetAllAsQueryable();
+        }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<CategoryResponse>> GetById(int id)
@@ -26,14 +31,21 @@ namespace APIServer.Controllers.Manage
         }
 
         [HttpPost]
-        public async Task<ActionResult<CategoryResponse>> Create(CategoryRequest dto)
+        public async Task<ActionResult<CategoryResponse>> Create([FromBody] CategoryRequest dto)
         {
-            var created = await _service.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.CategoryId }, created);
+            try
+            {
+                var created = await _service.CreateAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = created.CategoryId }, created);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, CategoryRequest dto)
+        public async Task<IActionResult> Update(int id, [FromBody] CategoryRequest dto)
         {
             var updated = await _service.UpdateAsync(id, dto);
             return updated ? NoContent() : NotFound();

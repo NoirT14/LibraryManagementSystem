@@ -1,6 +1,8 @@
-﻿using APIServer.DTO.PaperQuality;
+﻿using APIServer.DTO.Edition;
+using APIServer.DTO.PaperQuality;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace APIServer.Controllers.Manage
 {
@@ -15,8 +17,11 @@ namespace APIServer.Controllers.Manage
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PaperQualityResponse>>> GetAll() =>
-            Ok(await _service.GetAllAsync());
+        [EnableQuery]
+        public IQueryable<PaperQualityResponse> GetAll()
+        {
+            return _service.GetAllAsQueryable();
+        }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<PaperQualityResponse>> GetById(int id)
@@ -26,17 +31,31 @@ namespace APIServer.Controllers.Manage
         }
 
         [HttpPost]
-        public async Task<ActionResult<PaperQualityResponse>> Create(PaperQualityRequest dto)
+        public async Task<ActionResult<PaperQualityResponse>> Create([FromBody] PaperQualityRequest dto)
         {
-            var created = await _service.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.PaperQualityId }, created);
+            try
+            {
+                var created = await _service.CreateAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = created.PaperQualityId }, created);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, PaperQualityRequest dto)
+        public async Task<IActionResult> Update(int id, [FromBody] PaperQualityRequest dto)
         {
-            var updated = await _service.UpdateAsync(id, dto);
-            return updated ? NoContent() : NotFound();
+            try
+            {
+                var updated = await _service.UpdateAsync(id, dto);
+                return updated ? NoContent() : NotFound();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]

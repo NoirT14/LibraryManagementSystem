@@ -1,4 +1,5 @@
 ﻿using APIServer.Data;
+using APIServer.DTO.Reservation;
 using APIServer.Models;
 using APIServer.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -19,20 +20,52 @@ namespace APIServer.Service
         }
 
         // 1. Đặt sách
-        public async Task CreateReservationAsync(int userId, int variantId)
+        public async Task CreateReservationAsync(int userId, int volumeId)
         {
+            // Lấy tất cả các BookVariant thuộc Volume này, bao gồm BookCopies
+            var variants = await _context.BookVariants
+                .Where(v => v.VolumeId == volumeId)
+                .Include(v => v.BookCopies)
+                .ToListAsync();
+
+            BookCopy? availableCopy = null;
+            BookVariant? selectedVariant = null;
+
+            // Tìm BookCopy có trạng thái "Available"
+            foreach (var variant in variants)
+            {
+                availableCopy = variant.BookCopies.FirstOrDefault(copy => copy.CopyStatus == "Available");
+                if (availableCopy != null)
+                {
+                    selectedVariant = variant;
+                    break;
+                }
+            }
+
+            bool hasAvailableCopy = availableCopy != null;
+
+            if (hasAvailableCopy)
+            {
+                // Đánh dấu BookCopy là đã "mượn" (đã bị giữ chỗ, dù chưa physically borrowed)
+                availableCopy.CopyStatus = "Reserved";
+            }
+
+            // Nếu tìm thấy bản sao khả dụng
             var reservation = new Reservation
             {
                 UserId = userId,
-                VariantId = variantId,
-                ReservationDate = DateTime.Now,
-                ReservationStatus = "Pending"
+                VariantId = selectedVariant?.VariantId ?? variants.First().VariantId, // chọn variant đầu tiên nếu không có sẵn
+                ExpirationDate = hasAvailableCopy ? DateTime.Now.AddDays(1) : null,
+                ReservationStatus = availableCopy != null ? "Available" : "Pending",
+                FulfilledCopyId = availableCopy?.CopyId
             };
 
             _context.Reservations.Add(reservation);
             await _context.SaveChangesAsync();
 
-            var message = "Bạn đã đặt sách thành công. Vui lòng chờ khi sách có sẵn.";
+            string message = availableCopy != null
+                ? "Sách đã sẵn sàng, bạn có thể đến thư viện để mượn trong vòng 24 giờ."
+                : "Bạn đã đặt sách thành công. Vui lòng chờ khi sách có sẵn.";
 
             _context.Notifications.Add(new Notification
             {
@@ -48,8 +81,9 @@ namespace APIServer.Service
 
             await _context.SaveChangesAsync();
 
-            Console.WriteLine($"Reservation created and notification sent for User {userId}");
+            Console.WriteLine($"Reservation ({reservation.ReservationId}) created with status {reservation.ReservationStatus} for User {userId}");
         }
+
 
         // 2. Khi có bản sao trả về: Gửi noti + email
         public async Task CheckAvailableReservationsAsync()
@@ -185,6 +219,24 @@ namespace APIServer.Service
 
             await _context.SaveChangesAsync();
             Console.WriteLine($"Expired {expired.Count} reservations and sent notifications.");
+        }
+
+        public async Task<List<ReservationInfoListRespone>> GetReservationsByUserAsync(int userId)
+        {
+            return await _context.Reservations
+           .Where(r => r.UserId == userId)
+           .Include(r => r.Variant)
+               .ThenInclude(v => v.Volume)
+                   .ThenInclude(vol => vol.Book)
+           .Select(r => new ReservationInfoListRespone
+           {
+               ReservationId = r.ReservationId,
+               BookTitle = r.Variant.Volume.Book.Title,
+               VolumeTitle = r.Variant.Volume.VolumeTitle ?? $"Tập {r.Variant.Volume.VolumeNumber}",
+               ReservedDate = r.ReservationDate.ToString("yyyy-MM-dd"),
+               Status = r.ReservationStatus
+           })
+           .ToListAsync();
         }
     }
 }

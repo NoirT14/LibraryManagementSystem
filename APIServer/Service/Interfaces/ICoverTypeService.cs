@@ -1,10 +1,11 @@
-﻿using APIServer.DTO.CoverType;
+﻿using APIServer.DTO.Category;
+using APIServer.DTO.CoverType;
 
 namespace APIServer.Service.Interfaces
 {
     public interface ICoverTypeService
     {
-        Task<IEnumerable<CoverTypeResponse>> GetAllAsync();
+        IQueryable<CoverTypeResponse> GetAllAsQueryable();
         Task<CoverTypeResponse?> GetByIdAsync(int id);
         Task<CoverTypeResponse> CreateAsync(CoverTypeRequest dto);
         Task<bool> UpdateAsync(int id, CoverTypeRequest dto);

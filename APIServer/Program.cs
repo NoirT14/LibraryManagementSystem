@@ -15,6 +15,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OData.Edm;
 using System.Text;
+using APIServer.DTO.Author;
+using APIServer.DTO.Category;
+using APIServer.DTO.Edition;
+using APIServer.DTO.CoverType;
+using APIServer.DTO.PaperQuality;
+using APIServer.Config;
 
 namespace LibraryManagement.API
 {
@@ -29,22 +35,29 @@ namespace LibraryManagement.API
 
             builder.Services.AddControllers()
                 .AddJsonOptions(opt =>
-    {
-        opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
-        opt.JsonSerializerOptions.WriteIndented = true;
-    });
-
+            {
+                opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+                opt.JsonSerializerOptions.WriteIndented = true;
+            });
 
             builder.Services.AddControllers().AddOData(opt =>
             {
                 var builderOdata = new ODataConventionModelBuilder();
                 builderOdata.EntitySet<Book>("Books");
-                builderOdata.EntitySet<Category>("Categories");
-                builderOdata.EntitySet<Author>("Authors");
+                builderOdata.EntitySet<AuthorRespone>("Authors");
+                builderOdata.EntitySet<CategoryResponse>("Categories");
+                builderOdata.EntitySet<EditionResponse>("Editions");
+                builderOdata.EntitySet<CoverTypeResponse>("CoverTypes");
+                builderOdata.EntitySet<PaperQualityResponse>("PaperQuality");
                 builderOdata.EntitySet<BookVolume>("BookVolumes");
+                builderOdata.EntitySet<Notification>("notifications");
                 opt.AddRouteComponents("odata", builderOdata.GetEdmModel());
                 opt.Select().Expand().Filter().OrderBy().Count().SetMaxTop(100);
             });
+
+            builder.Services.Configure<CloudinarySettings>(
+                builder.Configuration.GetSection("CloudinarySettings"));
+            builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
             builder.Services.AddCors(options =>
             {
@@ -109,11 +122,13 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<IBookService, BookService>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ICoverTypeService, CoverTypeService>();
+            builder.Services.AddScoped<IEditionService, EditionService>();
             builder.Services.AddScoped<IPaperQualityService, PaperQualityService>();
             builder.Services.AddScoped<IPublisherService, PublisherService>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IAuthorService, AuthorService>();
             builder.Services.AddScoped<IBookVariantService, BookVariantService>();
 
             builder.Services.AddHostedService<NotificationJob>();

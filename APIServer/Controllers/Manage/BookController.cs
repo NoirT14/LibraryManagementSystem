@@ -38,8 +38,6 @@ namespace APIServer.Controllers.Manage
             return Ok(bookDetail);
         }
 
-
-
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] BookInfoRequest book)
         {

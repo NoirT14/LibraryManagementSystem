@@ -1,4 +1,5 @@
-﻿using APIServer.Service.Interfaces;
+﻿using APIServer.DTO.Reservation;
+using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace APIServer.Controllers
@@ -16,11 +17,11 @@ namespace APIServer.Controllers
 
         /// Đặt giữ sách
         [HttpPost("create")]
-        public async Task<IActionResult> CreateReservation([FromQuery] int userId, [FromQuery] int variantId)
+        public async Task<IActionResult> CreateReservation([FromQuery] int userId, [FromQuery] int volumeId)
         {
             try
             {
-                await _reservationService.CreateReservationAsync(userId, variantId);
+                await _reservationService.CreateReservationAsync(userId, volumeId);
                 return Ok(new { message = "Đặt giữ thành công." });
             }
             catch (Exception ex)
@@ -43,6 +44,13 @@ namespace APIServer.Controllers
         {
             await _reservationService.ExpireOldReservationsAsync();
             return Ok(new { message = "Đã xử lý các đặt giữ hết hạn." });
+        }
+
+        [HttpGet("user/{userId}")]
+        public async Task<ActionResult<List<ReservationDto>>> GetReservationsByUser(int userId)
+        {
+            var reservations = await _reservationService.GetReservationsByUserAsync(userId);
+            return Ok(reservations);
         }
     }
 }
