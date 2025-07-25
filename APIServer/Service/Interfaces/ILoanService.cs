@@ -33,8 +33,5 @@ namespace APIServer.Service.Interfaces
 
         Task<List<MonthlyStatDto>> GetLoansPerMonthAsync();
         Task<List<BookHomepageDto>> GetPopularHomepageBooksAsync(int top = 5);
-
-
-
     }
 }

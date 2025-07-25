@@ -1,5 +1,6 @@
 ﻿using APIServer.Models;
 using APIServer.DTO.Reservations;
+using APIServer.DTO.Reservation;
 
 namespace APIServer.Service.Interfaces
 {
@@ -36,6 +37,7 @@ namespace APIServer.Service.Interfaces
 
         Task CheckAvailableReservationsAsync(); // Gửi noti khi sách có sẵn
         Task ExpireOldReservationsAsync();      // Gửi noti khi hết hạn giữ
+
         //The
         Task<int> CountReservationsAsync();
         Task<int> CountByStatusAsync(string status);

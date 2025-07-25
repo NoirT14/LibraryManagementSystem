@@ -222,8 +222,7 @@ namespace APIServer.Service
                 .Select(g => new { Category = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(g => g.Category, g => g.Count);
         }
-
-
+  
         // BookService.cs
         public async Task<List<BookHomepageDto>> GetBooksForHomepageAsync()
         {

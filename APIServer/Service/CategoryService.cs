@@ -1,9 +1,10 @@
 ﻿using APIServer.Data;
+using APIServer.DTO.Author;
 using APIServer.DTO.Category;
 using APIServer.Models;
 using APIServer.Service.Interfaces;
+using APIServer.util;
 using Microsoft.EntityFrameworkCore;
-using System;
 
 namespace APIServer.Service
 {
@@ -16,16 +17,15 @@ namespace APIServer.Service
             _context = context;
         }
 
-        public async Task<IEnumerable<CategoryResponse>> GetAllAsync()
+        public IQueryable<CategoryResponse> GetAllAsQueryable()
         {
-            return await _context.Categories
+            return _context.Categories
                 .Select(c => new CategoryResponse
                 {
                     CategoryId = c.CategoryId,
                     CategoryName = c.CategoryName,
-                    BookCount = c.Books.Count
-                })
-                .ToListAsync();
+                    BookCount = c.Books.Count()
+                });
         }
 
         public async Task<CategoryResponse?> GetByIdAsync(int id)
@@ -42,6 +42,13 @@ namespace APIServer.Service
 
         public async Task<CategoryResponse> CreateAsync(CategoryRequest dto)
         {
+            if (string.IsNullOrEmpty(dto.CategoryName))
+            {
+                throw new InvalidOperationException("Category is empty.");
+            }
+
+            if (StringHelper.ExistsInList(dto.CategoryName, _context.Categories.Select(c => c.CategoryName).ToList())) throw new InvalidOperationException("Category already exists.");
+
             var category = new Category
             {
                 CategoryName = dto.CategoryName
@@ -59,8 +66,16 @@ namespace APIServer.Service
 
         public async Task<bool> UpdateAsync(int id, CategoryRequest dto)
         {
+            if (string.IsNullOrEmpty(dto.CategoryName))
+            {
+                throw new InvalidOperationException("Category is empty.");
+            }
+
             var category = await _context.Categories.FindAsync(id);
+
             if (category == null) return false;
+
+            if(StringHelper.ExistsInList(dto.CategoryName, _context.Categories.Select(c => c.CategoryName).ToList())) return false;
 
             category.CategoryName = dto.CategoryName;
 
@@ -74,7 +89,9 @@ namespace APIServer.Service
             var category = await _context.Categories.FindAsync(id);
             if (category == null) return false;
 
-            _context.Categories.Remove(category);
+            category.IsDelete = true;
+            _context.Categories.Update(category);
+
             await _context.SaveChangesAsync();
             return true;
         }

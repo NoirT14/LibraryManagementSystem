@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using APIServer.Service.Interfaces; // đổi theo namespace thật
 using APIServer.DTO;              // nếu có DTO như MonthlyStatDto
 
-namespace YourNamespace.Controllers
+namespace APIServer.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -26,7 +26,7 @@ namespace YourNamespace.Controllers
             _userService = userService;
             _reservationService = reservationService;
             _bookService = bookService;
-
+            
         }
 
         [HttpGet("summary")]

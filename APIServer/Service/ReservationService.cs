@@ -552,6 +552,7 @@ namespace APIServer.Service
                 .AnyAsync(r => r.VariantId == variantId && r.ReservationStatus == "Pending");
         }
 
+
         // 2. Khi có bản sao trả về: Gửi noti + email
         public async Task CheckAvailableReservationsAsync()
         {

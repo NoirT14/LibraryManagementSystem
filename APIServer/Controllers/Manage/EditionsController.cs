@@ -1,5 +1,6 @@
-﻿using APIServer.DTO.PaperQuality;
-using APIServer.DTO.Publisher;
+﻿using APIServer.DTO.Category;
+using APIServer.DTO.CoverType;
+using APIServer.DTO.Edition;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -7,36 +8,36 @@ using Microsoft.AspNetCore.OData.Query;
 namespace APIServer.Controllers.Manage
 {
     [Route("api/[controller]")]
-    public class PublishersController : ControllerBase
+    public class EditionsController : ControllerBase
     {
-        private readonly IPublisherService _service;
+        private readonly IEditionService _service;
 
-        public PublishersController(IPublisherService service)
+        public EditionsController(IEditionService service)
         {
             _service = service;
         }
 
         [HttpGet]
         [EnableQuery]
-        public IQueryable<PublisherResponse> GetAll()
+        public IQueryable<EditionResponse> GetAll()
         {
             return _service.GetAllAsQueryable();
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<PublisherResponse>> GetById(int id)
+        public async Task<ActionResult<EditionResponse>> GetById(int id)
         {
-            var item = await _service.GetByIdAsync(id);
-            return item == null ? NotFound() : Ok(item);
+            var edition = await _service.GetByIdAsync(id);
+            return edition == null ? NotFound() : Ok(edition);
         }
 
         [HttpPost]
-        public async Task<ActionResult<PublisherResponse>> Create([FromBody] PublisherRequest dto)
+        public async Task<ActionResult<EditionResponse>> Create([FromBody] EditionRequest dto)
         {
             try
             {
                 var created = await _service.CreateAsync(dto);
-                return CreatedAtAction(nameof(GetById), new { id = created.PublisherId }, created);
+                return CreatedAtAction(nameof(GetById), new { id = created.EditionId }, created);
             }
             catch (InvalidOperationException ex)
             {
@@ -45,7 +46,7 @@ namespace APIServer.Controllers.Manage
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] PublisherRequest dto)
+        public async Task<IActionResult> Update(int id, [FromBody] EditionRequest dto)
         {
             var updated = await _service.UpdateAsync(id, dto);
             return updated ? NoContent() : NotFound();

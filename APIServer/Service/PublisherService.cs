@@ -1,7 +1,9 @@
 ﻿using APIServer.Data;
+using APIServer.DTO.PaperQuality;
 using APIServer.DTO.Publisher;
 using APIServer.Models;
 using APIServer.Service.Interfaces;
+using APIServer.util;
 using Microsoft.EntityFrameworkCore;
 using System;
 
@@ -16,15 +18,21 @@ namespace APIServer.Service
             _context = context;
         }
 
-        public async Task<IEnumerable<PublisherResponse>> GetAllAsync()
+        public IQueryable<PublisherResponse> GetAllAsQueryable()
         {
-            return await _context.Publishers
+            return _context.Publishers
                 .Select(p => new PublisherResponse
                 {
                     PublisherId = p.PublisherId,
-                    PublisherName = p.PublisherName
-                })
-                .ToListAsync();
+                    PublisherName = p.PublisherName,
+                    Address = p.Address,
+                    Phone = p.Phone,
+                    Website = p.Website,
+                    EstablishedYear = p.EstablishedYear,
+                    BookCount = p.BookVariants
+                        .SelectMany(bv => bv.BookCopies)
+                        .Count()
+                });
         }
 
         public async Task<PublisherResponse?> GetByIdAsync(int id)
@@ -41,9 +49,20 @@ namespace APIServer.Service
 
         public async Task<PublisherResponse> CreateAsync(PublisherRequest dto)
         {
+            if (string.IsNullOrEmpty(dto.PublisherName))
+            {
+                throw new InvalidOperationException("Publisher name is empty.");
+            }
+
+            if (StringHelper.ExistsInList(dto.PublisherName, _context.Publishers.Select(c => c.PublisherName).ToList())) throw new InvalidOperationException("Publisher already exists.");
+
             var entity = new Publisher
             {
-                PublisherName = dto.PublisherName
+                PublisherName = dto.PublisherName,
+                Address = dto.Address,
+                Phone = dto.Phone,
+                Website = dto.Website,
+                EstablishedYear = dto.EstablishedYear
             };
 
             _context.Publishers.Add(entity);
@@ -58,10 +77,21 @@ namespace APIServer.Service
 
         public async Task<bool> UpdateAsync(int id, PublisherRequest dto)
         {
+            if (string.IsNullOrEmpty(dto.PublisherName))
+            {
+                throw new InvalidOperationException("Publisher name is empty.");
+            }
+
             var entity = await _context.Publishers.FindAsync(id);
             if (entity == null) return false;
 
+            if (StringHelper.ExistsInList(dto.PublisherName, _context.Publishers.Where(c => c.PublisherId != id).Select(c => c.PublisherName).ToList())) return false;
+
             entity.PublisherName = dto.PublisherName;
+            entity.Address = dto.Address;
+            entity.Phone = dto.Phone;
+            entity.Website = dto.Website;
+            entity.EstablishedYear = dto.EstablishedYear;
 
             _context.Publishers.Update(entity);
             await _context.SaveChangesAsync();
@@ -73,7 +103,9 @@ namespace APIServer.Service
             var entity = await _context.Publishers.FindAsync(id);
             if (entity == null) return false;
 
-            _context.Publishers.Remove(entity);
+            entity.IsDeleted = true;
+            _context.Publishers.Update(entity);
+
             await _context.SaveChangesAsync();
             return true;
         }

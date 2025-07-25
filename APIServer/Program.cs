@@ -12,6 +12,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using APIServer.Service.Jobs;
+using APIServer.DTO.Author;
+using APIServer.DTO.Category;
+using APIServer.DTO.Edition;
+using APIServer.DTO.CoverType;
+using APIServer.DTO.PaperQuality;
+using APIServer.Config;
+using Microsoft.OData.ModelBuilder;
+using APIServer.Models;
+using APIServer.DTO.Book;
 
 namespace LibraryManagement.API
 {
@@ -29,7 +38,18 @@ namespace LibraryManagement.API
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            //add CORS
+
+            builder.Services.AddControllers()
+                .AddJsonOptions(opt =>
+            {
+                opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+                opt.JsonSerializerOptions.WriteIndented = true;
+            });
+
+            builder.Services.Configure<CloudinarySettings>(
+                builder.Configuration.GetSection("CloudinarySettings"));
+            builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
@@ -78,18 +98,19 @@ namespace LibraryManagement.API
             builder.Services.AddHostedService<SessionCleanupService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
 
-            builder.Services.AddScoped<IBookVolumeService, BookVolumeService>();
             builder.Services.AddScoped(typeof(APIServer.Repositories.Interfaces.IRepository<>), typeof(APIServer.Repositories.Repository<>));
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<ILoanService, LoanService>();
             builder.Services.AddScoped<IBookService, BookService>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ICoverTypeService, CoverTypeService>();
+            builder.Services.AddScoped<IEditionService, EditionService>();
             builder.Services.AddScoped<IPaperQualityService, PaperQualityService>();
             builder.Services.AddScoped<IPublisherService, PublisherService>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IAuthorService, AuthorService>();
             builder.Services.AddScoped<IBookVariantService, BookVariantService>();
 
             builder.Services.AddHostedService<NotificationJob>();
@@ -105,17 +126,21 @@ namespace LibraryManagement.API
             }
 
             app.UseHttpsRedirection();
-            app.UseCors("AllowFrontend"); // giữ lại AllowFrontend thay vì AllowAll
+            app.UseCors("AllowFrontend");
+
+            // Thêm middleware CORS ngay trước UseAuthorization
+            app.UseCors("AllowLocalhost3000");
 
             app.UseAuthentication();
             app.UseMiddleware<BrowserFingerprintMiddleware>();
             app.UseAuthorization();
 
             app.MapControllers();
-            app.Run();
+
+            app.UseCors("AllowAll");
 
             app.Run();
+
         }
-
     }
 }

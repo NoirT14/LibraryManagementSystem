@@ -9,5 +9,7 @@ public partial class Edition
 
     public string EditionName { get; set; } = null!;
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<BookVariant> BookVariants { get; set; } = new List<BookVariant>();
 }

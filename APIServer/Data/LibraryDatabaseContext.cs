@@ -59,6 +59,9 @@ public partial class LibraryDatabaseContext : DbContext
                 .HasMaxLength(100)
                 .HasColumnName("author_name");
             entity.Property(e => e.Bio).HasColumnName("bio");
+            entity.Property(e => e.Nationality).HasMaxLength(100).HasColumnName("nationality");
+            entity.Property(e => e.Genre).HasMaxLength(100).HasColumnName("genre");
+            entity.Property(e => e.PhotoUrl).HasMaxLength(255).HasColumnName("photo_url");
         });
 
         modelBuilder.Entity<Book>(entity =>
@@ -204,9 +207,12 @@ public partial class LibraryDatabaseContext : DbContext
             entity.ToTable("categories");
 
             entity.Property(e => e.CategoryId).HasColumnName("category_id");
+            entity.Property(e => e.IsDelete).HasColumnName("is_delete");
             entity.Property(e => e.CategoryName)
                 .HasMaxLength(100)
                 .HasColumnName("category_name");
+
+            entity.HasQueryFilter(c => !c.IsDelete);
         });
 
         modelBuilder.Entity<CoverType>(entity =>
@@ -217,10 +223,14 @@ public partial class LibraryDatabaseContext : DbContext
 
             entity.HasIndex(e => e.CoverTypeName, "UQ__cover_ty__6648E52014B1500B").IsUnique();
 
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
             entity.Property(e => e.CoverTypeId).HasColumnName("cover_type_id");
             entity.Property(e => e.CoverTypeName)
                 .HasMaxLength(100)
                 .HasColumnName("cover_type_name");
+
+            entity.HasQueryFilter(c => !c.IsDeleted);
         });
 
         modelBuilder.Entity<Edition>(entity =>
@@ -232,9 +242,11 @@ public partial class LibraryDatabaseContext : DbContext
             entity.HasIndex(e => e.EditionName, "UQ__editions__A248E477A0629C67").IsUnique();
 
             entity.Property(e => e.EditionId).HasColumnName("edition_id");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
             entity.Property(e => e.EditionName)
                 .HasMaxLength(100)
                 .HasColumnName("edition_name");
+            entity.HasQueryFilter(e => !e.IsDeleted);
         });
 
         modelBuilder.Entity<Loan>(entity =>
@@ -340,9 +352,11 @@ public partial class LibraryDatabaseContext : DbContext
             entity.HasIndex(e => e.PaperQualityName, "UQ__paper_qu__A6AF2EC2D8894A07").IsUnique();
 
             entity.Property(e => e.PaperQualityId).HasColumnName("paper_quality_id");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
             entity.Property(e => e.PaperQualityName)
                 .HasMaxLength(100)
                 .HasColumnName("paper_quality_name");
+            entity.HasQueryFilter(c => !c.IsDeleted);
         });
 
         modelBuilder.Entity<Publisher>(entity =>
@@ -354,10 +368,32 @@ public partial class LibraryDatabaseContext : DbContext
             entity.HasIndex(e => e.PublisherName, "UQ__publishe__8DBCD4124609E5C4").IsUnique();
 
             entity.Property(e => e.PublisherId).HasColumnName("publisher_id");
+
             entity.Property(e => e.PublisherName)
                 .HasMaxLength(100)
                 .HasColumnName("publisher_name");
+
+            entity.Property(e => e.IsDeleted)
+                .HasColumnName("is_deleted");
+
+            entity.Property(e => e.Address)
+                .HasMaxLength(200)
+                .HasColumnName("address");
+
+            entity.Property(e => e.Phone)
+                .HasMaxLength(12)
+                .HasColumnName("phone");
+
+            entity.Property(e => e.Website)
+                .HasMaxLength(50)
+                .HasColumnName("website");
+
+            entity.Property(e => e.EstablishedYear)
+                .HasColumnName("established_year");
+
+            entity.HasQueryFilter(e => !e.IsDeleted);
         });
+
 
         modelBuilder.Entity<Reservation>(entity =>
         {

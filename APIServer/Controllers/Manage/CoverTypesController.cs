@@ -1,6 +1,8 @@
-﻿using APIServer.DTO.CoverType;
+﻿using APIServer.DTO.Category;
+using APIServer.DTO.CoverType;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 
 namespace APIServer.Controllers.Manage
 {
@@ -15,8 +17,11 @@ namespace APIServer.Controllers.Manage
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CoverTypeResponse>>> GetAll() =>
-            Ok(await _service.GetAllAsync());
+        [EnableQuery]
+        public IQueryable<CoverTypeResponse> GetAll()
+        {
+            return _service.GetAllAsQueryable();
+        }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<CoverTypeResponse>> GetById(int id)
@@ -26,14 +31,21 @@ namespace APIServer.Controllers.Manage
         }
 
         [HttpPost]
-        public async Task<ActionResult<CoverTypeResponse>> Create(CoverTypeRequest dto)
+        public async Task<ActionResult<CoverTypeResponse>> Create([FromBody] CoverTypeRequest dto)
         {
-            var created = await _service.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.CoverTypeId }, created);
+            try
+            {
+                var created = await _service.CreateAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = created.CoverTypeId }, created);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, CoverTypeRequest dto)
+        public async Task<IActionResult> Update(int id, [FromBody] CoverTypeRequest dto)
         {
             var updated = await _service.UpdateAsync(id, dto);
             return updated ? NoContent() : NotFound();
