@@ -20,6 +20,7 @@ namespace APIServer.Service.Interfaces
 
         // Availability check
         Task<BookAvailabilityDTO?> GetBookAvailabilityAsync(int variantId);
+        Task<List<BookAvailabilityDTO>> GetBookAvailabilityByBookIdAsync(int bookId);
 
         // Queue operations
         Task<int> GetQueuePositionAsync(int reservationId);

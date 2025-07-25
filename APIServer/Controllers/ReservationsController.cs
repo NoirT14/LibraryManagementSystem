@@ -102,6 +102,24 @@ namespace APIServer.Controllers
             }
         }
 
+        [HttpGet("availability/book/{bookId}")]
+        public async Task<IActionResult> GetBookAvailabilityByBookId(int bookId)
+        {
+            try
+            {
+                var availabilities = await _reservationService.GetBookAvailabilityByBookIdAsync(bookId);
+
+                if (availabilities == null || !availabilities.Any())
+                    return NotFound(new { message = "Không tìm thấy sách có thể đặt trước" });
+
+                return Ok(availabilities);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { message = "Đã xảy ra lỗi khi kiểm tra tình trạng sách" });
+            }
+        }
+
         // STAFF ENDPOINTS
 
         [HttpGet]

@@ -66,16 +66,6 @@ namespace APIServer.Service
                 return null; // User already has pending reservation for this book
             }
 
-            // Check if book is available (no need to reserve if available)
-            var availableCopies = await _context.BookCopies
-                .Where(c => c.VariantId == dto.VariantId && c.CopyStatus == "Available")
-                .CountAsync();
-
-            if (availableCopies > 0)
-            {
-                return null; // Book is available, no need to reserve
-            }
-
             // FIX 3: Add transaction
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -404,9 +394,54 @@ namespace APIServer.Service
                         .Count(),
                     CanReserve = _context.BookCopies
                         .Where(c => c.VariantId == variantId && c.CopyStatus == "Available")
-                        .Count() == 0
+                        .Count() > 0
                 })
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<List<BookAvailabilityDTO>> GetBookAvailabilityByBookIdAsync(int bookId)
+        {
+            // Bước 1: Lấy tất cả variants của book
+            var variants = await _context.BookVariants
+                .Include(v => v.Volume)
+                    .ThenInclude(vol => vol.Book)
+                        .ThenInclude(b => b.Authors)
+                .Include(v => v.Publisher)
+                .Include(v => v.BookCopies)
+                .Where(v => v.Volume.BookId == bookId)
+                .ToListAsync();
+
+            // Bước 2: Tính toán trong memory và lọc
+            var result = new List<BookAvailabilityDTO>();
+
+            foreach (var variant in variants)
+            {
+                var totalCopies = variant.BookCopies.Count;
+                var availableCopies = variant.BookCopies.Count(c => c.CopyStatus == "Available");
+                var pendingReservations = await _context.Reservations
+                    .CountAsync(r => r.VariantId == variant.VariantId && r.ReservationStatus == "Pending");
+
+                var canReserve = availableCopies > 0 && totalCopies > 0; // Phải có sách nhưng không có sẵn
+
+                if (canReserve)
+                {
+                    result.Add(new BookAvailabilityDTO
+                    {
+                        VariantId = variant.VariantId,
+                        Title = variant.Volume.Book.Title,
+                        VolumeTitle = variant.Volume.VolumeTitle ?? "",
+                        Authors = variant.Volume.Book.Authors.Select(ba => ba.AuthorName).ToList(),
+                        PublisherName = variant.Publisher.PublisherName,
+                        ISBN = variant.Isbn ?? "",
+                        TotalCopies = totalCopies,
+                        AvailableCopies = availableCopies,
+                        PendingReservations = pendingReservations,
+                        CanReserve = canReserve
+                    });
+                }
+            }
+
+            return result;
         }
 
         public async Task<int> GetQueuePositionAsync(int reservationId)
