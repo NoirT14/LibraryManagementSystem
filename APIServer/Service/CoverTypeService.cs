@@ -1,7 +1,9 @@
 ﻿using APIServer.Data;
+using APIServer.DTO.Category;
 using APIServer.DTO.CoverType;
 using APIServer.Models;
 using APIServer.Service.Interfaces;
+using APIServer.util;
 using Microsoft.EntityFrameworkCore;
 
 namespace APIServer.Service
@@ -15,15 +17,17 @@ namespace APIServer.Service
             _context = context;
         }
 
-        public async Task<IEnumerable<CoverTypeResponse>> GetAllAsync()
+        public IQueryable<CoverTypeResponse> GetAllAsQueryable()
         {
-            return await _context.CoverTypes
+            return _context.CoverTypes
                 .Select(c => new CoverTypeResponse
                 {
                     CoverTypeId = c.CoverTypeId,
-                    CoverTypeName = c.CoverTypeName
-                })
-                .ToListAsync();
+                    CoverTypeName = c.CoverTypeName,
+                    BookCount = c.BookVariants
+                        .SelectMany(bv => bv.BookCopies)
+                        .Count()
+                });
         }
 
         public async Task<CoverTypeResponse?> GetByIdAsync(int id)
@@ -40,6 +44,13 @@ namespace APIServer.Service
 
         public async Task<CoverTypeResponse> CreateAsync(CoverTypeRequest dto)
         {
+            if (string.IsNullOrEmpty(dto.CoverTypeName))
+            {
+                throw new InvalidOperationException("Cover type is empty.");
+            }
+
+            if (StringHelper.ExistsInList(dto.CoverTypeName, _context.CoverTypes.Select(c => c.CoverTypeName).ToList())) throw new InvalidOperationException("Cover type already exists.");
+
             var coverType = new CoverType
             {
                 CoverTypeName = dto.CoverTypeName
@@ -57,8 +68,15 @@ namespace APIServer.Service
 
         public async Task<bool> UpdateAsync(int id, CoverTypeRequest dto)
         {
+            if (string.IsNullOrEmpty(dto.CoverTypeName))
+            {
+                throw new InvalidOperationException("Cover type is empty.");
+            }
+
             var coverType = await _context.CoverTypes.FindAsync(id);
             if (coverType == null) return false;
+
+            if (StringHelper.ExistsInList(dto.CoverTypeName, _context.CoverTypes.Select(c => c.CoverTypeName).ToList())) return false;
 
             coverType.CoverTypeName = dto.CoverTypeName;
 
@@ -73,7 +91,9 @@ namespace APIServer.Service
             var coverType = await _context.CoverTypes.FindAsync(id);
             if (coverType == null) return false;
 
-            _context.CoverTypes.Remove(coverType);
+            coverType.IsDeleted = true;
+            _context.CoverTypes.Update(coverType);
+
             await _context.SaveChangesAsync();
 
             return true;

@@ -4,6 +4,7 @@ using APIServer.Models;
 using APIServer.Repositories.Interfaces;
 using APIServer.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace APIServer.Service
 {

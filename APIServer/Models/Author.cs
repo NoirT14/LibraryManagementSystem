@@ -11,5 +11,11 @@ public partial class Author
 
     public string? Bio { get; set; } = null!;
 
+    public string? Nationality { get; set; }
+
+    public string? Genre { get; set; }
+
+    public string? PhotoUrl { get; set; }
+
     public virtual ICollection<Book> Books { get; set; } = new List<Book>();
 }

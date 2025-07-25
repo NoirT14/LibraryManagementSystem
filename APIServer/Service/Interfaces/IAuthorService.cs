@@ -1,13 +1,14 @@
 ﻿using APIServer.DTO.Author;
+using APIServer.Models;
 
 namespace APIServer.Service.Interfaces
 {
     public interface IAuthorService
     {
-        Task<IEnumerable<AuthorRespone?>> GetAllAsync();
+        IQueryable<AuthorRespone> GetAllAsQueryable();
         Task<AuthorRespone?> GetByIdAsync(int id);
-        Task<AuthorRespone> CreateAsync(AuthorRequest dto);
-        Task<bool> UpdateAsync(int id, AuthorRequest dto);
+        Task<Author> CreateAuthorAsync(AuthorRequest request);
+        Task<Author?> UpdateAuthorAsync(int id, AuthorRequest request);
         Task<bool> DeleteAsync(int id);
     }
 }

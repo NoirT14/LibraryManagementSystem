@@ -19,10 +19,5 @@ namespace APIServer.Service.Interfaces
 
         Task<Dictionary<string, int>> GetBookCountByCategoryAsync();
 
-        Task<List<BookHomepageDto>> GetBooksForHomepageAsync();
-
-        Task<BookDetailDTO?> GetBookDetailAsync(int bookId);
-
-
     }
 }

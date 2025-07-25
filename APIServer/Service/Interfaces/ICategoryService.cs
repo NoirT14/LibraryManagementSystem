@@ -1,10 +1,11 @@
-﻿using APIServer.DTO.Category;
+﻿using APIServer.DTO.Author;
+using APIServer.DTO.Category;
 
 namespace APIServer.Service.Interfaces
 {
     public interface ICategoryService
     {
-        Task<IEnumerable<CategoryResponse>> GetAllAsync();
+        IQueryable<CategoryResponse> GetAllAsQueryable();
         Task<CategoryResponse?> GetByIdAsync(int id);
         Task<CategoryResponse> CreateAsync(CategoryRequest dto);
         Task<bool> UpdateAsync(int id, CategoryRequest dto);
