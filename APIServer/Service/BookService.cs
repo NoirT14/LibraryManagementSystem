@@ -2,7 +2,9 @@
 using APIServer.DTO.Book;
 using APIServer.Models;
 using APIServer.Service.Interfaces;
+using APIServer.util;
 using Microsoft.AspNetCore.OData.Deltas;
+using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore;
 using System;
 
@@ -11,9 +13,11 @@ namespace APIServer.Service
     public class BookService : IBookService
     {
         private readonly LibraryDatabaseContext _context;
-        public BookService(LibraryDatabaseContext context)
+        private readonly ICloudinaryService _cloudinaryService;
+        public BookService(LibraryDatabaseContext context, ICloudinaryService cloudinaryService)
         {
             _context = context;
+            _cloudinaryService = cloudinaryService;
         }
 
         public async Task<Book> Create(BookInfoRequest request)
@@ -28,15 +32,39 @@ namespace APIServer.Service
             };
 
             // Gán tác giả nếu có
-            if (request.AuthorIds != null && request.AuthorIds.Any())
+            if (!string.IsNullOrWhiteSpace(request.AuthorIds))
             {
+                var authorIds = request.AuthorIds.Split(',')
+                                                 .Select(id => int.Parse(id.Trim()))
+                                                 .ToList();
+
                 book.Authors = await _context.Authors
-                    .Where(a => request.AuthorIds.Contains(a.AuthorId))
-                    .ToListAsync();
+                                             .Where(a => authorIds.Contains(a.AuthorId))
+                                             .ToListAsync();
+            }
+
+            if (request.CoverImage != null)
+            {
+                    var uploadedUrl = await _cloudinaryService.UploadImageAsync(request.CoverImage, "books");
+                    book.CoverImg = uploadedUrl;
             }
 
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
+
+            if (request.Volumes != null && request.Volumes.Any())
+            {
+                var volumes = request.Volumes.Select(v => new BookVolume
+                {
+                    BookId = book.BookId,
+                    VolumeNumber = v.VolumeNumber,
+                    VolumeTitle = v.VolumeTitle,
+                    Description = v.Description
+                }).ToList();
+
+                _context.BookVolumes.AddRange(volumes);
+                await _context.SaveChangesAsync();
+            }
 
             // Load navigation properties để trả về đầy đủ
             return await _context.Books
@@ -51,7 +79,8 @@ namespace APIServer.Service
         {
             var entity = await _context.Books.FindAsync(id);
             if (entity == null) return false;
-            _context.Books.Remove(entity);
+            entity.isDelete = true;
+            _context.Books.Update(entity);
             await _context.SaveChangesAsync();
             return true;
         }
@@ -183,22 +212,103 @@ namespace APIServer.Service
             };
         }
 
-
-        public async Task<Book?> Update(int id, Delta<Book> delta)
+        public IQueryable<BookInfoListSearchCopyRespone> GetBookInfoList(ODataQueryOptions<BookInfoListSearchCopyRespone> options)
         {
-            var entity = await _context.Books.FindAsync(id);
-            if (entity == null) return null;
+            var query = _context.BookVolumes
+                .Include(v => v.Book)
+                    .ThenInclude(b => b.Authors)
+                .Where(v => !v.Book.isDelete)
+                .Select(v => new BookInfoListSearchCopyRespone
+                {
+                    VolumeId = v.VolumeId,
+                    VolumeNumber = v.VolumeNumber,
+                    Title = v.Book.Title,
+                    CoverImg = v.Book.CoverImg,
+                    Author = string.Join(", ", v.Book.Authors.Select(a => a.AuthorName))
+                });
 
-            delta.Patch(entity);
+            return (IQueryable<BookInfoListSearchCopyRespone>)options.ApplyTo(query);
+        }
+
+        public async Task<Book?> Update(int id, BookInfoRequest request)
+        {
+            var book = await _context.Books
+                .Include(b => b.Authors)
+                .Include(b => b.BookVolumes)
+                .FirstOrDefaultAsync(b => b.BookId == id);
+
+            if (book == null) return null;
+
+            // Cập nhật thông tin cơ bản
+            book.Title = request.Title;
+            book.Language = request.Language;
+            book.Description = request.Description;
+            book.CategoryId = request.CategoryId;
+            book.BookStatus = request.BookStatus;
+
+            // Cập nhật tác giả
+            if (!string.IsNullOrWhiteSpace(request.AuthorIds))
+            {
+                var authorIds = request.AuthorIds.Split(',')
+                                                 .Select(id => int.Parse(id.Trim()))
+                                                 .ToList();
+
+                var authors = await _context.Authors
+                                            .Where(a => authorIds.Contains(a.AuthorId))
+                                            .ToListAsync();
+
+                book.Authors = authors;
+            }
+
+            // Cập nhật ảnh bìa nếu có
+            if (request.CoverImage != null)
+            {
+                var uploadedUrl = await _cloudinaryService.UploadImageAsync(request.CoverImage, "books");
+                book.CoverImg = uploadedUrl;
+            }
+
+            _context.Books.Update(book);
             await _context.SaveChangesAsync();
 
-            // Load navigation properties sau khi update
+            if (request.Volumes != null)
+            {
+                foreach (var volReq in request.Volumes)
+                {
+                    if (volReq.VolumeId.HasValue)
+                    {
+                        // Cập nhật volume cũ
+                        var existingVolume = book.BookVolumes.FirstOrDefault(v => v.VolumeId == volReq.VolumeId.Value);
+                        if (existingVolume != null)
+                        {
+                            existingVolume.VolumeNumber = volReq.VolumeNumber;
+                            existingVolume.VolumeTitle = volReq.VolumeTitle;
+                            existingVolume.Description = volReq.Description;
+                        }
+                    }
+                    else
+                    {
+                        // Thêm volume mới
+                        var newVolume = new BookVolume
+                        {
+                            BookId = book.BookId,
+                            VolumeNumber = volReq.VolumeNumber,
+                            VolumeTitle = volReq.VolumeTitle,
+                            Description = volReq.Description
+                        };
+                        _context.BookVolumes.Add(newVolume);
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
             return await _context.Books
                 .Include(b => b.Category)
                 .Include(b => b.Authors)
                 .Include(b => b.BookVolumes)
-                .FirstOrDefaultAsync(b => b.BookId == id);
+                .FirstAsync(b => b.BookId == book.BookId);
         }
+
 
 
         //The
@@ -301,6 +411,65 @@ namespace APIServer.Service
             return dto;
         }
 
+        public async Task<BookAllFieldRespone?> GetBookAllFieldAsync(int bookId)
+        {
+            var book = await _context.Books
+            .Include(b => b.Authors)
+            .Include(b => b.Category)
+            .Include(b => b.BookVolumes)
+                .ThenInclude(v => v.BookVariants)
+                    .ThenInclude(v => v.BookCopies)
+            .Include(b => b.BookVolumes)
+                .ThenInclude(v => v.BookVariants)
+                    .ThenInclude(v => v.Edition)
+            .Include(b => b.BookVolumes)
+                .ThenInclude(v => v.BookVariants)
+                    .ThenInclude(v => v.Publisher)
+            .Include(b => b.BookVolumes)
+                .ThenInclude(v => v.BookVariants)
+                    .ThenInclude(v => v.CoverType)
+            .Include(b => b.BookVolumes)
+                .ThenInclude(v => v.BookVariants)
+                    .ThenInclude(v => v.PaperQuality)
+            .FirstOrDefaultAsync(b => b.BookId == bookId && !b.isDelete);
 
+            if (book == null) return null;
+
+            return new BookAllFieldRespone
+            {
+                BookId = book.BookId,
+                Title = book.Title,
+                Language = book.Language,
+                BookStatus = book.BookStatus,
+                Description = book.Description,
+                CoverImg = book.CoverImg,
+                CategoryName = book.Category.CategoryName,
+                Authors = book.Authors.Select(a => a.AuthorName).ToList(),
+                Volumes = book.BookVolumes.Select(v => new BookAllFieldRespone.VolumeDto
+                {
+                    VolumeId = v.VolumeId,
+                    VolumeNumber = v.VolumeNumber,
+                    VolumeTitle = v.VolumeTitle,
+                    Description = v.Description,
+                    Variants = v.BookVariants.Select(variant => new BookAllFieldRespone.VariantDto
+                    {
+                        VariantId = variant.VariantId,
+                        PublicationYear = variant.PublicationYear,
+                        Isbn = variant.Isbn,
+                        EditionName = variant.Edition?.EditionName,
+                        PublisherName = variant.Publisher?.PublisherName,
+                        CoverTypeName = variant.CoverType?.CoverTypeName,
+                        PaperQualityName = variant.PaperQuality?.PaperQualityName,
+                        Copies = variant.BookCopies.Select(c => new BookAllFieldRespone.CopyDto
+                        {
+                            CopyId = c.CopyId,
+                            Barcode = c.Barcode,
+                            CopyStatus = c.CopyStatus,
+                            Location = c.Location
+                        }).ToList()
+                    }).ToList()
+                }).ToList()
+            };
+        }
     }
 }

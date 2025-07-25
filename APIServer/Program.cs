@@ -90,6 +90,7 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<IEmailService, EmailService>(); // thêm lại
             builder.Services.AddScoped<IUserService, UserService>();   // thêm lại
             builder.Services.AddScoped<IBookService, BookService>();
+            builder.Services.AddScoped<IBookCopyService, BookCopyService>();
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<ILoanService, LoanService>();
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));

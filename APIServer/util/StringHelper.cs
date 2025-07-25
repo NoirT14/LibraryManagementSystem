@@ -43,5 +43,17 @@ namespace APIServer.util
             return list.Any(item => NormalizeString(item) == normalizedInput);
         }
 
+        public static string GenerateIsbn()
+        {
+            return $"978-{Random.Shared.Next(100000000, 999999999)}";
+        }
+
+        public static string GenerateBarcode()
+        {
+            var datePart = DateTime.UtcNow.ToString("yyyyMMdd");
+            var rand = Random.Shared.Next(1000, 9999);
+            return $"BC-{datePart}-{rand}";
+        }
+
     }
 }
