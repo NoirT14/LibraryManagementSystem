@@ -188,7 +188,7 @@ namespace APIServer.Service
                         .ThenInclude(vol => vol.Book)
                             .ThenInclude(b => b.Authors)
                 .Include(r => r.Variant.Publisher)
-                .Where(r => r.UserId == userId && r.ReservationStatus == "Pending")
+                .Where(r => r.UserId == userId)
                     .OrderBy(r => r.ReservationDate)
                 .ToListAsync();
 
@@ -210,7 +210,6 @@ namespace APIServer.Service
             {
                 var queuePosition = await _context.Reservations
                     .Where(res => res.VariantId == r.VariantId &&
-                                 res.ReservationStatus == "Pending" &&
                                  res.ReservationDate < r.ReservationDate)
                     .CountAsync() + 1;
 
