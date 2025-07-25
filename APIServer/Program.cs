@@ -49,10 +49,10 @@ namespace LibraryManagement.API
                 builderOdata.EntitySet<EditionResponse>("Editions");
                 builderOdata.EntitySet<CoverTypeResponse>("CoverTypes");
                 builderOdata.EntitySet<PaperQualityResponse>("PaperQuality");
-                builderOdata.EntitySet<BookVolume>("BookVolumes");
+                builderOdata.EntitySet<BookVolume>("BookVolumess");
                 builderOdata.EntitySet<Notification>("notifications");
                 builderOdata.EntitySet<BookVolumeDTO>("BookVolumes");
-                builderOdata.EntitySet<HomepageBookDTO>("Books");
+                builderOdata.EntitySet<HomepageBookDTO>("Book");
                 builderOdata.EntitySet<Notification>("notifications");
                 opt.AddRouteComponents("odata", builderOdata.GetEdmModel());
                 opt.Select().Expand().Filter().OrderBy().Count().SetMaxTop(100);
