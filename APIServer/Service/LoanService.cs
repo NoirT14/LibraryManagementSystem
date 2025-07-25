@@ -1,4 +1,5 @@
 ﻿using APIServer.Data;
+using APIServer.DTO.Book;
 using APIServer.DTO.Loan;
 using APIServer.DTO.Loans;
 using APIServer.Models;
@@ -662,6 +663,65 @@ namespace APIServer.Service
 
             return await Task.FromResult(result); // vẫn giữ async để đồng bộ interface
         }
+
+        public async Task<List<BookHomepageDto>> GetPopularHomepageBooksAsync(int top = 5)
+        {
+            // Lấy top bookId được mượn nhiều nhất
+            var topBookIdsWithCount = await (
+                from l in _context.Loans
+                join c in _context.BookCopies on l.CopyId equals c.CopyId
+                join v in _context.BookVariants on c.VariantId equals v.VariantId
+                join vol in _context.BookVolumes on v.VolumeId equals vol.VolumeId
+                group l by vol.BookId into g
+                orderby g.Count() descending
+                select new
+                {
+                    BookId = g.Key,
+                    BorrowCount = g.Count()
+                }
+            ).Take(top).ToListAsync();
+
+            var topBookIds = topBookIdsWithCount.Select(x => x.BookId).ToList();
+
+            // Truy vấn danh sách sách cùng với Authors và Category
+            var books = await _context.Books
+                .Include(b => b.Authors)
+                .Include(b => b.Category)
+                .Include(b => b.BookVolumes)
+                    .ThenInclude(vol => vol.BookVariants)
+                        .ThenInclude(variant => variant.BookCopies)
+                .Where(b => topBookIds.Contains(b.BookId))
+                .ToListAsync();
+
+            var bookDtos = books.Select(b => new BookHomepageDto
+            {
+                BookId = b.BookId,
+                Title = b.Title,
+                Category = b.Category?.CategoryName ?? "Không rõ",
+                Language = b.Language ?? "Không rõ",
+                Image = b.CoverImg ?? "",
+                Authors = b.Authors.Select(a => a.AuthorName).ToList(),
+                Available = b.BookVolumes
+                    .SelectMany(v => v.BookVariants)
+                    .SelectMany(v => v.BookCopies)
+                    .Any(c => c.CopyStatus == "Available")
+            }).ToList();
+
+            // Sắp xếp lại đúng theo borrow count
+            var sortedDtos = bookDtos
+                .Join(topBookIdsWithCount,
+                      dto => dto.BookId,
+                      stat => stat.BookId,
+                      (dto, stat) => new { Book = dto, Count = stat.BorrowCount })
+                .OrderByDescending(x => x.Count)
+                .Select(x => x.Book)
+                .ToList();
+
+            return sortedDtos;
+        }
+
+
+
     }
 }
 

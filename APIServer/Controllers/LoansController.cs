@@ -218,5 +218,15 @@ namespace APIServer.Controllers
                 return StatusCode(500, new { message = "Đã xảy ra lỗi khi cập nhật" });
             }
         }
+
+
+        // API phổ biến cho trang homepage (không cần login)
+        [HttpGet("popular-homepage")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPopularBooksForHomepage([FromQuery] int top = 5)
+        {
+            var books = await _loanService.GetPopularHomepageBooksAsync(top);
+            return Ok(books);
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using APIServer.DTO.Loan;
+﻿using APIServer.DTO.Book;
+using APIServer.DTO.Loan;
 using APIServer.DTO.Loans;
 using APIServer.Models;
 
@@ -31,6 +32,8 @@ namespace APIServer.Service.Interfaces
         Task<decimal?> GetTotalFineAmountAsync();
 
         Task<List<MonthlyStatDto>> GetLoansPerMonthAsync();
+        Task<List<BookHomepageDto>> GetPopularHomepageBooksAsync(int top = 5);
+
 
 
     }
