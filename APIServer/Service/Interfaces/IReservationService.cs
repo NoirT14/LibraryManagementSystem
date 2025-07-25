@@ -1,5 +1,7 @@
 ﻿using APIServer.Models;
 using APIServer.DTO.Reservations;
+using APIServer.DTO.Reservation;
+
 
 namespace APIServer.Service.Interfaces
 {

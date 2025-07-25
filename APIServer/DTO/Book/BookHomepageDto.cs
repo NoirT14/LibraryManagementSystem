@@ -10,6 +10,9 @@ namespace APIServer.DTO.Book
         public string Category { get; set; } = string.Empty;
         public List<string> Authors { get; set; } = new();
         public int VariantCount { get; set; }
+        public string Language { get; set; } = string.Empty;
+        public string Image { get; set; } = string.Empty;
+        public bool Available { get; set; }
     }
 }
 
