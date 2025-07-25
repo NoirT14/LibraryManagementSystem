@@ -13,5 +13,11 @@ namespace APIServer.Service.Interfaces
         Task<Book?> Update(int id, Microsoft.AspNetCore.OData.Deltas.Delta<Book> delta);
         Task<bool> Delete(int id);
 
+        //the
+        Task<int> CountTotalCopiesAsync();
+        Task<Dictionary<string, int>> GetCopyStatusStatsAsync();
+
+        Task<Dictionary<string, int>> GetBookCountByCategoryAsync();
+
     }
 }

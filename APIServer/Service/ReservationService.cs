@@ -221,6 +221,16 @@ namespace APIServer.Service
             Console.WriteLine($"Expired {expired.Count} reservations and sent notifications.");
         }
 
+        public async Task<int> CountReservationsAsync()
+        {
+            return await _context.Reservations.CountAsync();
+        }
+
+        public async Task<int> CountByStatusAsync(string status)
+        {
+            return await _context.Reservations.CountAsync(r => r.ReservationStatus == status);
+        }
+
         public async Task<List<ReservationInfoListRespone>> GetReservationsByUserAsync(int userId)
         {
             return await _context.Reservations
