@@ -74,10 +74,10 @@ namespace APIServer.Service
                 // Create reservation
             var reservation = new Reservation
             {
-                    UserId = dto.UserId,
-                    VariantId = dto.VariantId,
+                UserId = dto.UserId,
+                VariantId = dto.VariantId,
                 ReservationDate = DateTime.Now,
-                    ExpirationDate = dto.ExpirationDate ?? DateTime.Now.AddDays(7),
+                ExpirationDate = dto.ExpirationDate ?? DateTime.Now.AddDays(7),
                 ReservationStatus = "Pending"
             };
 
@@ -485,7 +485,7 @@ namespace APIServer.Service
                 var pendingReservations = await _context.Reservations
                     .CountAsync(r => r.VariantId == variant.VariantId && r.ReservationStatus == "Pending");
 
-                var canReserve = availableCopies > 0 && totalCopies > 0; // Phải có sách nhưng không có sẵn
+                var canReserve = availableCopies >= 0 && totalCopies >= 0;
 
                 if (canReserve)
                 {
