@@ -11,6 +11,8 @@
         public string? BookStatus { get; set; }
 
         public string? Description { get; set; }
-        public List<int> AuthorIds { get; set; } = new();
+        public string? AuthorIds { get; set; }
+
+        public IFormFile? CoverImage { get; set; }
     }
 }

@@ -27,24 +27,35 @@ namespace APIServer.Service
                 Description = request.Description,
             };
 
-            // Gán tác giả nếu có
-            if (request.AuthorIds != null && request.AuthorIds.Any())
+            // Parse AuthorIds string
+            List<int> parsedAuthorIds = new();
+            if (!string.IsNullOrWhiteSpace(request.AuthorIds))
+            {
+                parsedAuthorIds = request.AuthorIds
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(idStr => int.TryParse(idStr.Trim(), out var id) ? id : (int?)null)
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value)
+                    .ToList();
+            }
+
+            if (parsedAuthorIds.Any())
             {
                 book.Authors = await _context.Authors
-                    .Where(a => request.AuthorIds.Contains(a.AuthorId))
+                    .Where(a => parsedAuthorIds.Contains(a.AuthorId))
                     .ToListAsync();
             }
 
             _context.Books.Add(book);
             await _context.SaveChangesAsync();
 
-            // Load navigation properties để trả về đầy đủ
             return await _context.Books
                 .Include(b => b.Category)
                 .Include(b => b.Authors)
                 .Include(b => b.BookVolumes)
                 .FirstAsync(b => b.BookId == book.BookId);
         }
+
 
 
         public async Task<bool> Delete(int id)
