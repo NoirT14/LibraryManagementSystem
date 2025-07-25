@@ -1,4 +1,9 @@
-﻿using APIServer.DTO.Book;
+﻿using APIServer.DTO.Author;
+using APIServer.DTO.Book;
+using APIServer.DTO.Category;
+using APIServer.DTO.CoverType;
+using APIServer.DTO.Edition;
+using APIServer.DTO.PaperQuality;
 using APIServer.DTO.User;
 using APIServer.Models;
 using Microsoft.OData.Edm;
@@ -15,8 +20,14 @@ namespace APIServer.Configs
             builder.EntitySet<BookVolumeDTO>("BookVolumes");
             builder.EntitySet<Notification>("notifications");
             builder.EntitySet<Book>("Books");
-            builder.EntitySet<Category>("Categories");
-            builder.EntitySet<Author>("Authors");
+
+            builder.EntitySet<AuthorRespone>("Authors");
+            builder.EntitySet<CategoryResponse>("Categories");
+            builder.EntitySet<EditionResponse>("Editions");
+            builder.EntitySet<CoverTypeResponse>("CoverTypes");
+            builder.EntitySet<PaperQualityResponse>("PaperQuality");
+            builder.EntitySet<HomepageBookDTO>("Book");
+
             return builder.GetEdmModel();
         }
     }
