@@ -62,6 +62,8 @@ public partial class LibraryDatabaseContext : DbContext
             entity.Property(e => e.Nationality).HasMaxLength(100).HasColumnName("nationality");
             entity.Property(e => e.Genre).HasMaxLength(100).HasColumnName("genre");
             entity.Property(e => e.PhotoUrl).HasMaxLength(255).HasColumnName("photo_url");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+            entity.HasQueryFilter(c => !c.IsDeleted);
         });
 
         modelBuilder.Entity<Book>(entity =>

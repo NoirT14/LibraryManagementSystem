@@ -17,5 +17,7 @@ public partial class Author
 
     public string? PhotoUrl { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<Book> Books { get; set; } = new List<Book>();
 }
