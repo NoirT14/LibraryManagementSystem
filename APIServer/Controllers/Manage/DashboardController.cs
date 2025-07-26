@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using APIServer.Service.Interfaces; // đổi theo namespace thật
-using APIServer.DTO;              // nếu có DTO như MonthlyStatDto
+using APIServer.DTO;
 
-namespace APIServer.Controllers
+namespace APIServer.Controllers.Manage
 {
     [ApiController]
     [Route("api/[controller]")]

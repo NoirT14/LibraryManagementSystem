@@ -332,8 +332,7 @@ namespace APIServer.Service
                 .Select(g => new { Category = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(g => g.Category, g => g.Count);
         }
-  
-        // BookService.cs
+
         public async Task<List<BookHomepageDto>> GetBooksForHomepageAsync()
         {
             var books = await _context.Books
@@ -390,7 +389,7 @@ namespace APIServer.Service
                 Language = book.Language,
                 Status = book.BookStatus,
                 CategoryName = book.Category?.CategoryName,
-                Image = book.CoverImg, 
+                Image = book.CoverImg,
                 Authors = book.Authors.Select(ba => ba.AuthorName).ToList(),
                 Variants = book.BookVolumes
                     .SelectMany(v => v.BookVariants.Select(variant => new BookDetailDTO.VariantInfo

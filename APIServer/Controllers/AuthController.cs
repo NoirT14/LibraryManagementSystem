@@ -86,24 +86,113 @@ namespace APIServer.Controllers
             }
         }
 
-        [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDTO request)
-        {
-            var result = await _authService.ResetPassword(request);
-            if (!result.IsSuccess)
-            {
-                return BadRequest(new { message = result.ErrorMessage });
-            }
-
-            return Ok(new { message = "Password reset successfully!" });
-        }
-
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDTO request)
         {
-            var result = await _authService.SendResetPasswordTokenAsync(request);
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
 
-            return Ok(new { message = "If the email exists, a reset password link has been sent." });
+                var ipAddress = GetClientIpAddress();
+                _logger.LogInformation("Forgot password request for {UsernameOrEmail} from {IpAddress}",
+                    request.UsernameorEmail, ipAddress);
+
+                var result = await _authService.SendResetPasswordOtpAsync(request);
+
+                // Always return success to prevent email enumeration attacks
+                return Ok(new
+                {
+                    message = "Nếu email tồn tại trong hệ thống, mã OTP đã được gửi để đặt lại mật khẩu.",
+                    isSuccess = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during forgot password for {UsernameOrEmail}", request.UsernameorEmail);
+                return StatusCode(500, new { message = "Đã xảy ra lỗi khi xử lý yêu cầu." });
+            }
+        }
+
+        // ✅ NEW: Verify OTP endpoint
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDTO request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var ipAddress = GetClientIpAddress();
+                _logger.LogInformation("OTP verification attempt for {Email} from {IpAddress}",
+                    request.Email, ipAddress);
+
+                var result = await _authService.VerifyOtpAsync(request);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(new
+                    {
+                        message = "Mã OTP hợp lệ. Bạn có thể đặt lại mật khẩu.",
+                        isSuccess = true,
+                        data = result.Data
+                    });
+                }
+
+                return BadRequest(new
+                {
+                    message = result.ErrorMessage,
+                    isSuccess = false
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during OTP verification for {Email}", request.Email);
+                return StatusCode(500, new { message = "Đã xảy ra lỗi khi xác minh OTP." });
+            }
+        }
+
+        // ✅ NEW: Reset password with OTP
+        [HttpPost("reset-password-with-otp")]
+        public async Task<IActionResult> ResetPasswordWithOtp([FromBody] ResetPasswordWithOtpRequestDTO request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var ipAddress = GetClientIpAddress();
+                _logger.LogInformation("Password reset with OTP attempt for {Email} from {IpAddress}",
+                    request.Email, ipAddress);
+
+                var result = await _authService.ResetPasswordWithOtpAsync(request);
+
+                if (result.IsSuccess)
+                {
+                    return Ok(new
+                    {
+                        message = "Mật khẩu đã được đặt lại thành công!",
+                        isSuccess = true
+                    });
+                }
+
+                return BadRequest(new
+                {
+                    message = result.ErrorMessage,
+                    isSuccess = false
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during password reset with OTP for {Email}", request.Email);
+                return StatusCode(500, new { message = "Đã xảy ra lỗi khi đặt lại mật khẩu." });
+            }
         }
 
         [HttpGet("analytics")]

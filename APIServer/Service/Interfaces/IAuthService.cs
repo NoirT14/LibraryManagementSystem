@@ -6,6 +6,11 @@ namespace APIServer.Service.Interfaces
     {
         Task<AuthResult> Authenticate(LoginRequestDTO loginRequest, string ipAddress, string userAgent);
         Task<AuthResult> Register(RegisterRequestDTO registerRequest, string ipAddress, string userAgent);
+
+        Task<bool> SendResetPasswordOtpAsync(ForgotPasswordRequestDTO request);
+        Task<AuthResult> VerifyOtpAsync(VerifyOtpRequestDTO request);
+        Task<AuthResult> ResetPasswordWithOtpAsync(ResetPasswordWithOtpRequestDTO request);
+        Task CleanupExpiredOtpsAsync();
         Task<bool> SendResetPasswordTokenAsync(ForgotPasswordRequestDTO request);
         Task<AuthResult> ResetPassword(ResetPasswordRequestDTO resetRequest);
         Task<bool> IsEmailTaken(string email);

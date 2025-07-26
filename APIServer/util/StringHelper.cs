@@ -54,6 +54,5 @@ namespace APIServer.util
             var rand = Random.Shared.Next(1000, 9999);
             return $"BC-{datePart}-{rand}";
         }
-
     }
 }

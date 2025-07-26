@@ -26,6 +26,5 @@ namespace APIServer.Service.Interfaces
 
         Task<BookDetailDTO?> GetBookDetailAsync(int bookId);
 
-
     }
 }

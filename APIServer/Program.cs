@@ -22,6 +22,7 @@ using Microsoft.OData.ModelBuilder;
 using APIServer.Models;
 using APIServer.DTO.Book;
 
+
 namespace LibraryManagement.API
 {
     public class Program
@@ -38,18 +39,12 @@ namespace LibraryManagement.API
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
             builder.Services.AddControllers()
                 .AddJsonOptions(opt =>
             {
                 opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
                 opt.JsonSerializerOptions.WriteIndented = true;
             });
-
-            builder.Services.Configure<CloudinarySettings>(
-                builder.Configuration.GetSection("CloudinarySettings"));
-            builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
-
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
@@ -59,6 +54,9 @@ namespace LibraryManagement.API
                 );
             });
 
+            builder.Services.Configure<CloudinarySettings>(
+                builder.Configuration.GetSection("CloudinarySettings"));
+            builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
             //add jwt
             builder.Services.AddAuthentication(options =>
             {
@@ -132,13 +130,12 @@ namespace LibraryManagement.API
             // Thêm middleware CORS ngay trước UseAuthorization
             app.UseCors("AllowLocalhost3000");
 
+
             app.UseAuthentication();
             app.UseMiddleware<BrowserFingerprintMiddleware>();
             app.UseAuthorization();
 
             app.MapControllers();
-
-            app.UseCors("AllowAll");
 
             app.Run();
 

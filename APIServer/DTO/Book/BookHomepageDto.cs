@@ -6,8 +6,10 @@ namespace APIServer.DTO.Book
     {
         public int BookId { get; set; }
         public string Title { get; set; } = string.Empty;
-        public List<string> Authors { get; set; } = new();
+        public string CoverImg { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
+        public List<string> Authors { get; set; } = new();
+        public int VariantCount { get; set; }
         public string Language { get; set; } = string.Empty;
         public string Image { get; set; } = string.Empty;
         public bool Available { get; set; }
