@@ -17,17 +17,17 @@ namespace APIServer.Configs
         {
             var builder = new ODataConventionModelBuilder();
             builder.EntitySet<AdminUserResponseDTO>("UsersOData");
-            builder.EntitySet<BookVolumeDTO>("BookVolumes");
-            builder.EntitySet<Notification>("notifications");
             builder.EntitySet<Book>("Books");
-
             builder.EntitySet<AuthorRespone>("Authors");
             builder.EntitySet<CategoryResponse>("Categories");
             builder.EntitySet<EditionResponse>("Editions");
             builder.EntitySet<CoverTypeResponse>("CoverTypes");
             builder.EntitySet<PaperQualityResponse>("PaperQuality");
+            builder.EntitySet<BookVolume>("BookVolumess");
+            builder.EntitySet<Notification>("notifications");
+            builder.EntitySet<BookVolumeDTO>("BookVolumes");
             builder.EntitySet<HomepageBookDTO>("Book");
-
+            builder.EntitySet<Notification>("notifications");
             return builder.GetEdmModel();
         }
     }
