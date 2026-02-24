@@ -55,6 +55,16 @@ namespace APIServer.Service
                 return null;
             }
 
+            // Check if user has reached maximum loan limit (5 loans)
+            var activeLoansCount = await _context.Loans
+                .CountAsync(l => l.UserId == dto.UserId &&
+                           (l.LoanStatus == "Borrowed" || l.LoanStatus == "Overdue"));
+
+            if (activeLoansCount >= 5)
+            {
+                return null;
+            }
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
