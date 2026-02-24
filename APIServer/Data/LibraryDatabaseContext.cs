@@ -62,6 +62,8 @@ public partial class LibraryDatabaseContext : DbContext
             entity.Property(e => e.Nationality).HasMaxLength(100).HasColumnName("nationality");
             entity.Property(e => e.Genre).HasMaxLength(100).HasColumnName("genre");
             entity.Property(e => e.PhotoUrl).HasMaxLength(255).HasColumnName("photo_url");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+            entity.HasQueryFilter(c => !c.IsDeleted);
         });
 
         modelBuilder.Entity<Book>(entity =>
@@ -85,6 +87,7 @@ public partial class LibraryDatabaseContext : DbContext
             entity.Property(e => e.CoverImg)
                 .HasMaxLength(200)
                 .HasColumnName("cover_img");
+            entity.Property(e => e.isDelete).HasColumnName("is_deleted");
 
             entity.HasOne(d => d.Category).WithMany(p => p.Books)
                 .HasForeignKey(d => d.CategoryId)
@@ -109,6 +112,7 @@ public partial class LibraryDatabaseContext : DbContext
                         j.IndexerProperty<int>("BookId").HasColumnName("book_id");
                         j.IndexerProperty<int>("AuthorId").HasColumnName("author_id");
                     });
+            entity.HasQueryFilter(c => !c.isDelete);
         });
 
         modelBuilder.Entity<BookCopy>(entity =>

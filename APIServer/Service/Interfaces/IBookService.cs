@@ -1,5 +1,6 @@
 ﻿using APIServer.DTO.Book;
 using APIServer.Models;
+using Microsoft.AspNetCore.OData.Query;
 
 
 namespace APIServer.Service.Interfaces
@@ -10,8 +11,10 @@ namespace APIServer.Service.Interfaces
         Task<Book?> GetById(int id);
         Task<BookDetailRespone?> GetBookDetailById(int id);
         Task<Book> Create(BookInfoRequest request);
-        Task<Book?> Update(int id, Microsoft.AspNetCore.OData.Deltas.Delta<Book> delta);
+        Task<Book?> Update(int id, BookInfoRequest request);
         Task<bool> Delete(int id);
+        Task<BookAllFieldRespone?> GetBookAllFieldAsync(int bookId);
+        IQueryable<BookInfoListSearchCopyRespone> GetBookInfoList(ODataQueryOptions<BookInfoListSearchCopyRespone> options);
 
         //the
         Task<int> CountTotalCopiesAsync();

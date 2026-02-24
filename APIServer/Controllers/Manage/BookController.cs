@@ -39,27 +39,51 @@ namespace APIServer.Controllers.Manage
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] BookInfoRequest book)
+        public async Task<IActionResult> Post([FromForm] BookInfoRequest book)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
             var created = await _bookService.Create(book);
-            return Created(created);
+            return Ok(created);
         }
 
-        [HttpPatch("({key})")]
-        public async Task<IActionResult> Patch([FromODataUri] int key, [FromBody] Delta<Book> delta)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Put(int id, [FromForm] BookInfoRequest book)
         {
-            var updated = await _bookService.Update(key, delta);
-            if (updated == null) return NotFound();
-            return Updated(updated);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var updated = await _bookService.Update(id, book);
+            if (updated == null)
+                return NotFound();
+
+            return Ok(updated);
         }
 
-        [HttpDelete("({key})")]
-        public async Task<IActionResult> Delete([FromODataUri] int key)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
         {
-            var deleted = await _bookService.Delete(key);
+            var deleted = await _bookService.Delete(id);
             if (!deleted) return NotFound();
             return NoContent();
+        }
+
+        [HttpGet("{id}/detail")]
+        public async Task<IActionResult> GetBookAllFieldDetail(int id)
+        {
+            var result = await _bookService.GetBookAllFieldAsync(id);
+
+            if (result == null)
+                return NotFound(new { message = "Book not found." });
+
+            return Ok(result);
+        }
+
+        [HttpGet("getBookForCopy")]
+        [EnableQuery]
+        public IActionResult GetBookForCopy(ODataQueryOptions<BookInfoListSearchCopyRespone> options)
+        {
+            var result = _bookService.GetBookInfoList(options);
+            return Ok(result);
         }
     }
 }

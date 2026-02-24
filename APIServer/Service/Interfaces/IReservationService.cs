@@ -2,7 +2,6 @@
 using APIServer.DTO.Reservations;
 using APIServer.DTO.Reservation;
 
-
 namespace APIServer.Service.Interfaces
 {
     public interface IReservationService

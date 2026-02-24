@@ -100,7 +100,8 @@ namespace APIServer.Service
             var author = await _context.Authors.FindAsync(id);
             if (author == null) return false;
 
-            _context.Authors.Remove(author);
+            author.IsDeleted = true;
+            _context.Authors.Update(author);
             await _context.SaveChangesAsync();
             return true;
         }

@@ -18,6 +18,10 @@ using APIServer.DTO.Edition;
 using APIServer.DTO.CoverType;
 using APIServer.DTO.PaperQuality;
 using APIServer.Config;
+using Microsoft.OData.ModelBuilder;
+using APIServer.Models;
+using APIServer.DTO.Book;
+
 
 namespace LibraryManagement.API
 {
@@ -35,7 +39,12 @@ namespace LibraryManagement.API
             builder.Services.AddDbContext<LibraryDatabaseContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
+            builder.Services.AddControllers()
+                .AddJsonOptions(opt =>
+            {
+                opt.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+                opt.JsonSerializerOptions.WriteIndented = true;
+            });
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
@@ -79,6 +88,7 @@ namespace LibraryManagement.API
             builder.Services.AddScoped<IEmailService, EmailService>(); // thêm lại
             builder.Services.AddScoped<IUserService, UserService>();   // thêm lại
             builder.Services.AddScoped<IBookService, BookService>();
+            builder.Services.AddScoped<IBookCopyService, BookCopyService>();
             builder.Services.AddScoped<IReservationService, ReservationService>();
             builder.Services.AddScoped<ILoanService, LoanService>();
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -114,7 +124,12 @@ namespace LibraryManagement.API
                 app.UseSwaggerUI();
             }
 
+            app.UseHttpsRedirection();
             app.UseCors("AllowFrontend");
+
+            // Thêm middleware CORS ngay trước UseAuthorization
+            app.UseCors("AllowLocalhost3000");
+
 
             app.UseAuthentication();
             app.UseMiddleware<BrowserFingerprintMiddleware>();
